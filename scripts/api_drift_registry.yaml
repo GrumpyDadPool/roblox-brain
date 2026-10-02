@@ -793,3 +793,25 @@ entries:
     library: debug
     member: profilebegin
   verified: true
+- id: luau-core-vector-lerp-exists
+  claim: vector.lerp interpolates Luau vectors; Vector3 uses its Lerp method
+  files:
+  - path: skills/core/roblox-luau-core/references/full.md
+  teaching_needles:
+  - vector.lerp
+  check:
+    type: library_member_exists
+    library: vector
+    member: lerp
+  verified: 2026-10-02
+- id: input-dpadup-keycode-exists
+  claim: Enum.KeyCode.DPadUp is a digital gamepad input for ContextActionService
+  files:
+  - path: skills/gameplay/roblox-input/references/full.md
+  teaching_needles:
+  - Enum.KeyCode.DPadUp
+  check:
+    type: enum_item_exists
+    enum: KeyCode
+    item: DPadUp
+  verified: 2026-10-02

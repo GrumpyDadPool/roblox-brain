@@ -9,11 +9,11 @@ Tooling should make the source tree reproducible without forcing every project i
 | Need | Useful tool | Keep in mind |
 | --- | --- | --- |
 | file-to-Studio sync or build | Rojo | define the data-model mapping in a project file |
-| third-party packages | Wally | commit the manifest and lockfile; choose realms intentionally |
+| third-party packages | Wally or pesde | commit the manifest and lockfile; choose realms intentionally |
 | Luau linting | Selene | configure the Roblox standard and project exceptions |
 | formatting | StyLua | pin the formatter and run a check in CI |
 | standalone scripts | Lune | use only where its runtime libraries are appropriate |
-| tool versions | Aftman or an existing manager | one source of truth for versions |
+| tool versions | Rokit, or the project's existing manager | one source of truth for versions |
 | editor navigation | luau-lsp plus a sourcemap | regenerate the map when the tree changes |
 
 If the project already has a working toolchain, extend it before introducing another manager.
@@ -34,12 +34,13 @@ When working with an agentic tool:
 - **Never assume both sides are in sync.** Before mutating, read from the source of truth, then write to the same side. After an agent changes files, verify Studio reflects it (and vice versa), especially after a reload.
 - **Rojo gotchas:** `rojo serve` watches the filesystem; a script written into Studio by another tool can be overwritten on the next sync, and an agent editing files must run `rojo build` or rely on serve to push. Do not mix MCP-driven Studio edits with a running Rojo serve on the same place without acknowledging which side wins.
 - **Bidirectional sync gotchas:** conflict resolution is a real decision, not a default. If both sides changed, pick Studio priority or local priority per file and say which; do not apply both silently.
+- **Pulling edits out of Studio (Rojo syncback):** since Rojo 7.7.0, `rojo syncback` is the first-party way to convert instances from a saved place file (`.rbxl`/`.rbxlx`/`.rbxm`/`.rbxmx`, via a required `--input`) into files under the project's mapping. It is an offline file pull from a saved file, not live two-way sync; behavior is controlled by `syncbackRules` in the project file. Preview before writing: `rojo syncback --dry-run --list --input <file>` (the project positional is optional and defaults to the current directory). Normal output goes to stderr; always dry-run first, because syncback can delete or rewrite mapped files.
 
 ## 1c. Optional ecosystem: name it, do not push
 
 Some tooling improves agent and developer productivity but is not essential to a working Roblox project. An agent should **mention these exist** when a user asks about them or is clearly doing work they would automate (linting, formatting, test orchestration), but **should not impose them** on a project that does not use them:
 
-- **Selene** (lint), **StyLua** (format), **luau-lsp** (editor intelligence), **Lune** (standalone Luau scripts/tests), **Wally/pesde** (packages), **Aftman/Rokit** (tool manager), **Rojo** (files-first sync). [TestEZ](https://github.com/Roblox/testez) is archived; keep it where already used, but do not introduce it as a default for new projects.
+- **Selene** (lint), **StyLua** (format), **luau-lsp** (editor intelligence), **Lune** (standalone Luau scripts/tests), **Wally/pesde** (packages), **Rokit** (tool manager; Aftman is archived), **Rojo** (files-first sync), **[lest](https://github.com/lest-luau/lest)** (Luau test runner with cloud and Studio backends). [TestEZ](https://github.com/Roblox/testez) is archived; keep it where already used, but do not introduce it as a default for new projects. Where a project has no test runner, lest is one option to mention, not a mandate. Its Studio backend launches edit-mode `RunScript`, not a stepping client playtest; it does not verify hover, live input, or mobile sensors.
 - **Roblox-TS** (TypeScript-to-Luau compiler): a real production stack used by some studios, with its own tradeoffs; see the language-choice section before recommending it for an agent workflow.
 
 The line: if the user asks "should I add linting/formatting/tests?" or is hand-doing something these automate, offer the option and the tradeoff, then let them choose. If the project already has a toolchain, extend it; do not introduce a new ecosystem unprompted. The exceptions that justify recommendation: files-first source control (Rojo) and CI reproducibility, when the user is clearly trying to version or automate their project.
@@ -87,12 +88,12 @@ Use the exact conventions documented by the project's Rojo version. Test both `r
 
 ## 3. Packages: Wally, pesde, rokit, or vendoring
 
-<!-- temporal: 2026-08 -->
-The package-manager question has no single winner as of 2026-08; an agent should know the landscape and follow the project, not evangelize:
+<!-- temporal: 2026-10 -->
+The package-manager question has no single winner as of 2026-10; an agent should know the landscape and follow the project, not evangelize:
 
-- **Wally** (UpliftGames): the long-standing default, but the CLI's last tagged release is 2023-06 and registry growth stalled. Roblox's April 2026 "Evolving Luau OSS" announcement said new official libraries publish under `roblox/` on Wally, so the registry is not dead, but treat Wally as legacy-in-good-standing, not the future.
-- **pesde** (Danaid): the active community successor; manifest-based like Cargo, supports Roblox and Lune targets. Growing, smaller package count than Wally.
-- **Rokit**: package *tool* manager (pins CLI tools like Rojo), not a dependency manager. The tool-manager slot is settled: **Aftman is archived** (LPGhatguy/aftman, 2025) and Rokit is the successor.
+- **Wally** (UpliftGames): the long-standing default. The CLI's last tagged release is 2023-06, which says nothing about the registry itself: package publishing to `wally-index` continues (commits observed 2026-10). Roblox's April 2026 "Evolving Luau OSS" announcement said new official libraries publish under `roblox/` on Wally. Treat the CLI's release cadence and the registry's activity as separate facts; do not claim adoption trends either way.
+- **pesde** (pesde-pkg): an active community alternative; manifest-based like Cargo, supports Roblox and Lune targets. Smaller package count than Wally. Its `[wally_indices]` manifest table lets a pesde project install Wally packages directly, so choosing pesde does not orphan existing Wally dependencies; a `sourcemap_generator` script is required for Wally-dependency type support.
+- **Rokit**: package *tool* manager (pins CLI tools like Rojo), not a dependency manager. **Aftman is archived** (LPGhatguy/aftman, 2025); for new projects Rokit is the common choice, and it reads existing `aftman.toml`/`foreman.toml` projects.
 - **Vendoring**: copying a module into `ReplicatedStorage` is still a common and respectable pattern; the Fusion maintainer publicly prefers package-manager-agnostic file bundles pending an official solution. For single-file community modules (TopbarPlus, FastCast) it is the norm. Legitimate; require a provenance comment with the thread URL and version.
 - **Direct GitHub installs**: common in agent workflows where the dependency is one clone + a Rojo path mapping.
 
@@ -113,14 +114,14 @@ The names and versions above are examples, not recommendations. Verify package o
 
 ## 4. Pin the toolchain
 
-Aftman is archived and should be treated as legacy compatibility. If an existing repository already uses `aftman.toml`, keep its versions pinned and avoid an unrelated migration during feature work. For a new project, evaluate a maintained manager such as Rokit or another toolchain that the team can support.
+Aftman is archived and should be treated as legacy compatibility. If an existing repository already uses `aftman.toml`, keep its versions pinned and avoid an unrelated migration during feature work. For a new project, lead with Rokit (or the project's existing manager); Rokit is compatible with existing `aftman.toml` and `foreman.toml` projects.
 
-An existing Aftman manifest can look like this:
+An existing Aftman manifest can look like this (example pins, verified current as of 2026-10):
 ```toml
 [tools]
-rojo = "rojo-rbx/rojo@7.7.0"
+rojo = "rojo-rbx/rojo@7.7.1"
 wally = "UpliftGames/wally@0.3.2"
-selene = "kampfkarren/selene@0.31.0"
+selene = "kampfkarren/selene@0.32.0"
 stylua = "JohnnyMorganz/StyLua@2.5.2"
 lune = "lune-org/lune@0.10.5"
 ```

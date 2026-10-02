@@ -143,7 +143,7 @@ Loop variables in a numeric or generic `for` have iteration-local behavior. Vari
 ### `const` bindings
 
 <!-- temporal: 2026-03 -->
-`const` was added in Luau 0.711 (March 2026) and is newer than most models' training cutoffs. Older tooling and lint stubs may reject it; the keyword is valid ([release notes](https://github.com/luau-lang/luau/releases/tag/0.711), [RFC](https://github.com/luau-lang/rfcs/blob/master/docs/const-keyword.md)).
+`const` was added in Luau 0.711 (March 2026). Older tooling and lint stubs may reject it; the keyword is valid ([release notes](https://github.com/luau-lang/luau/releases/tag/0.711), [RFC](https://github.com/luau-lang/rfcs/blob/master/docs/const-keyword.md)).
 
 ```luau
 const maxRetries = 3
@@ -331,13 +331,14 @@ local n = vector.normalize(v)
 local d = vector.dot(v, n)
 local c = vector.cross(v, n)
 local a = vector.angle(v, n)
+local l = vector.lerp(v, n, 0.5)
 -- componentwise: vector.floor / ceil / abs / sign / clamp / min / max
 -- constants: vector.zero, vector.one
 ```
 
 - Components are `x`/`y`/`z` (case-insensitive access); vectors are immutable, so there is no component write.
 - Operator support: `+`, `-`, `*`, `/`, unary minus, and indexing are built into the VM, which is why vector math is fast under `--!native`.
-- **There is no `vector.lerp`.** Linear interpolation is not in the library; use `math.lerp(a, b, t)` per component, or Roblox's `Vector3:Lerp()` for the engine datatype. Do not invent `vector.lerp` when translating code.
+- `vector.lerp(vec1, vec2, alpha)` linearly interpolates component-wise between the two vectors; `alpha` is not clamped to `[0, 1]` (values outside extrapolate). Do not confuse this Luau library function with Roblox's engine `Vector3` datatype, which uses the method form `Vector3:Lerp(goal, alpha)`.
 - 4-wide mode (`LUA_VECTOR_SIZE`) exists for other embedders, not for Roblox, which is 3-wide.
 
 ## 13. Naming conventions

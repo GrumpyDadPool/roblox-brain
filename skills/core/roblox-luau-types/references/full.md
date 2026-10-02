@@ -21,7 +21,7 @@ The type system exists to **catch bugs at analysis time** without affecting runt
 2. **Annotate boundaries.** Function parameters, return types, and exported module surfaces benefit from explicit types. Internal locals usually don't.
 3. **Preserve relationships.** A generic `<T>` that carries a type through a transform is more valuable than `any` that erases it.
 4. **Narrow, don't cast.** Use `typeof()`, `IsA()`, and conditional checks to narrow types. Use `::` only when you genuinely know more than the checker.
-5. **Sealed vs unsealed matters.** An annotated table is sealed (no new fields). An unannotated local table accumulates fields until it leaves scope or gets returned.
+5. **Sealed vs unsealed matters.** An explicitly annotated table is sealed (no new fields). An unannotated local table stays unsealed while it is being built; it seals on annotation, on being returned from a function, or when its declaring scope exits — not on being passed to a function.
 
 ## Strictness Modes
 
@@ -100,7 +100,9 @@ local data = {
 -- data is unsealed here, you can still add fields
 data.guild = "Warriors"
 
--- But once you pass it to a typed function or return it, it seals
+-- Passing it to a typed function does NOT seal it (width subtyping allows
+-- extra properties at the call site); it seals on annotation, on return
+-- from a function, or when its declaring scope exits.
 ```
 
 ## Union and Intersection Types

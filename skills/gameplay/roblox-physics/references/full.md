@@ -26,7 +26,7 @@
 | `LinearVelocity` | Constant velocity in direction | Conveyor belts, moving platforms |
 | `AngularVelocity` | Constant rotation speed | Spinning obstacles, fans |
 | `VectorForce` | Apply constant force | Gravity modification, thrust |
-| `LineForce` | Constant force along the Attachment0→Attachment1 axis | Tractor beams, magnetics, tethers |
+| `LineForce` | Force along the Attachment0→Attachment1 line, applied to Attachment0's assembly | Tractor beams, magnetics, tethers |
 | `Torque` | Apply constant torque | Spinning objects |
 
 ### Spring/Rope
@@ -39,23 +39,24 @@
 
 ## LineForce
 
-`LineForce` applies a constant force along the axis between `Attachment0` and `Attachment1`; it pulls (or pushes) one assembly toward the other, and the direction tracks the parts as they move. Compare `VectorForce`: a fixed `Vector3` (world or attachment-relative) whose direction never changes. Use LineForce when the pull must follow a target part; use VectorForce for constant world-direction thrust.
+`LineForce` applies a force along the line between `Attachment0` and `Attachment1`. By default the force is applied **to the parent of `Attachment0`** (toward or away from `Attachment1`, which serves as the target direction and receives no force unless `ReactionForceEnabled = true`). The direction tracks the parts as they move. Compare `VectorForce`: a fixed `Vector3` (world or attachment-relative) whose direction never changes. Use LineForce when the pull must follow a target part; use VectorForce for constant world-direction thrust.
 
 ```luau
 local lf = Instance.new("LineForce")
-lf.Attachment0 = anchorAtt     -- on the anchor part
-lf.Attachment1 = pulledAtt     -- pulled toward Attachment0 when Magnitude > 0
-lf.Magnitude = 5000            -- force along the attachment axis
-lf.MaxForce = 10000            -- cap the applied force
-lf.ReactionForceEnabled = true -- equal/opposite force on the anchor part
-lf.ApplyAtCenterOfMass = true  -- apply at CoM instead of Attachment1
+lf.Attachment0 = anchorAtt     -- this part RECEIVES the force (default)
+lf.Attachment1 = pulledTargetAtt -- target direction only, unless ReactionForceEnabled
+lf.Magnitude = 5000            -- force along the attachment axis (sign sets pull vs push)
 lf.InverseSquareLaw = true     -- falloff with distance (gravity/magnet feel)
+lf.MaxForce = 10000            -- cap applied force; ONLY active when InverseSquareLaw=true
+lf.ReactionForceEnabled = true -- also push the Attachment1 part with equal/opposite force
+lf.ApplyAtCenterOfMass = true  -- apply at Attachment0's assembly CoM instead of Attachment0
 lf.Parent = anchorPart
 ```
 
-- `Magnitude`: signed force; sign sets pull vs push.
-- `MaxForce`: upper clamp (no `MinForce` property; limit in scripts if needed).
+- `Magnitude`: signed force along the Attachment0→Attachment1 line; sign sets pull vs push.
+- `MaxForce`: upper clamp on the absolute force, but **only active when `InverseSquareLaw = true`** (it guards the 1/d² blow-up when the attachments align). With `InverseSquareLaw = false` the property is inert — clamp `Magnitude` in scripts instead.
 - `InverseSquareLaw`: force scales as 1/distance² between the attachments.
+- `ApplyAtCenterOfMass`: when `true`, force is applied at the center of mass of `Attachment0`'s parent assembly (and the force line starts there); it does not move the application point to `Attachment1`.
 
 ## Attachment Pattern
 
@@ -282,10 +283,10 @@ ik.Enabled = false
 ### Server-Authoritative Raycast Projectile (hitscan)
 
 ```luau
+-- Modern filter API: ExcludeInstances/IncludeInstances (FilterType not needed).
 local function fireProjectile(origin: Vector3, direction: Vector3, damage: number, ignore: {Instance})
     local params = RaycastParams.new()
-    params.FilterDescendantsInstances = ignore
-    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.ExcludeInstances = ignore -- exclusions take priority over inclusions
 
     local result = workspace:Raycast(origin, direction * 300, params)
     if result then
@@ -300,6 +301,13 @@ local function fireProjectile(origin: Vector3, direction: Vector3, damage: numbe
     return origin + direction * 300
 end
 ```
+
+### Raycast filtering: modern and legacy forms
+
+`RaycastParams` has two filter APIs:
+
+- **Modern**: `ExcludeInstances` (array of instances whose descendants are excluded) and `IncludeInstances` (only those descendants are considered). They can be combined for mixed filtering — e.g. include a large folder but exclude specific children — and **exclusions take priority over inclusions** when an instance matches both. `IncludeInstances = nil` is the most permissive filter (includes everything), whereas `IncludeInstances = {}` is the most restrictive (includes nothing) — a deliberate nil-vs-empty distinction when building "raycast only this folder" queries.
+- **Legacy (still functional, superseded)**: `FilterDescendantsInstances` + `FilterType = Enum.RaycastFilterType.Exclude/Include`. Older examples using this pair keep working; for new work prefer `ExcludeInstances`/`IncludeInstances`.
 
 ### Physics Projectile (arcing, grenade-style)
 

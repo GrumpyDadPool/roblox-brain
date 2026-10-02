@@ -1,7 +1,7 @@
 ---
 name: roblox-gui
 description: "Use when building Roblox menus, HUDs, shops, notifications, dialogs, or responsive cross-platform UI."
-last_reviewed: 2026-08-31
+last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/ui
   - https://create.roblox.com/docs/ui/position-and-size

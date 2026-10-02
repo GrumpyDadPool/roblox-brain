@@ -11,7 +11,7 @@ The most reliable Roblox UI is layout-driven, state-aware, and tested at more th
 - `BillboardGui`: a camera-facing label or panel in the 3D world.
 - `ViewportFrame`: a UI region that renders a 3D model preview.
 
-Set `DisplayOrder` deliberately when multiple `ScreenGui` instances overlap. Use `ResetOnSpawn` only when the UI should survive character respawn. Do not set `IgnoreGuiInset` globally without checking how the layout interacts with Roblox's top-bar and safe-area behavior.
+Set `DisplayOrder` deliberately when multiple `ScreenGui` instances overlap. For UI templates in `StarterGui`, set `ResetOnSpawn = false` and keep the `ScreenGui` a direct child of `StarterGui` to clone it once and preserve it across character respawns. Templates with `ResetOnSpawn = true` (the default), or nested indirectly under `StarterGui`, are deleted and re-cloned on respawn. This describes StarterGui template cloning, not every dynamically created `ScreenGui`. Do not set `IgnoreGuiInset` globally without checking how the layout interacts with Roblox's top-bar and safe-area behavior.
 
 ## 2. Build from containers
 
@@ -198,18 +198,25 @@ Every interactive control needs:
 
 Native `GuiObject.MouseEnter`/`MouseLeave` only re-check hover when the mouse moves, so they can miss when content scrolls under a stationary cursor (e.g. inside a `ScrollingFrame`) or occasionally fail to fire `MouseLeave`. For reliable hover, poll the cursor each frame and fire your own enter/leave on state transitions. This is a practitioner pattern (DevForum lead: "REAL MouseEnter/MouseLeave for GuiObjects", 7eoeb, https://devforum.roblox.com/t/real-mouseentermouseleave-for-guiobjects-they-actually-fire/3980310). Prefer `PlayerGui:GetGuiObjectsAtPosition()` over hardcoded top-bar offsets, and clean up the signals with the owning UI's lifetime.
 
+The two coordinate spaces differ: `UserInputService:GetMouseLocation()` returns raw pixels that do **not** account for `Enum.ScreenInsets`, while `BasePlayerGui:GetGuiObjectsAtPosition()` expects x/y relative to the top-left corner **after** the GUI inset is applied (per its docs, see `GuiService:GetGuiInset()`). Convert by subtracting the top-left inset before the hit test — the example below documents that conversion, but the exact on-screen offset behavior (especially with `ScreenGui.IgnoreGuiInset = true`, top-bar variants, or mobile) has **not been live-verified in Studio**; illustrative only, verify against the real target layout before relying on it. Do not assume raw `GetMouseLocation()` coordinates are correct for `IgnoreGuiInset = true` ScreenGuis without measuring.
+
 ```luau
+-- ILLUSTRATIVE: inset conversion not live-verified in Studio; see note above.
 local Players = game:GetService("Players")
 local RS = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 local hovered = false
 RS.RenderStepped:Connect(function()
     local pos = UIS:GetMouseLocation()
+    -- GetGuiObjectsAtPosition expects inset-adjusted coordinates; subtract
+    -- the top-left inset (first GetGuiInset return) before the hit test.
+    local inset = GuiService:GetGuiInset()
     local isOver = false
-    for _, obj in playerGui:GetGuiObjectsAtPosition(pos.X, pos.Y) do
+    for _, obj in playerGui:GetGuiObjectsAtPosition(pos.X - inset.X, pos.Y - inset.Y) do
         if obj == frame then isOver = true break end
     end
     if isOver and not hovered then

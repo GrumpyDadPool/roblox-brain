@@ -242,7 +242,7 @@ Open-source study codebases ranked by DevForum likes. Read before architecting s
 
 ECS is not standard practice in shipped Roblox experiences. The pattern recurs for specific problems, not as a default architecture.
 
-- If a project already uses one, the leading Luau library is [jecs](https://github.com/Ukendio/jecs) (462 stars, active 2026; entity relationships as first-class). Alternatives: matter-ecs (stalled since 2024), ECX (dead, author moved on).
+- If a project already uses one, the leading Luau library is [jecs](https://github.com/Ukendio/jecs) (active 2026; entity relationships as first-class). Alternatives: matter-ecs (stalled since 2024). Verify current status before recommending; this list is not exhaustive.
 - What most production games actually use: OOP tables + CollectionService tags + attribute replication + per-system update loops with rotating work cursors. That combination delivers most of the cache/iteration benefit without the discipline cost.
 - The honest case for ECS: thousands of homogeneous simulated entities (swarms, RTS units, bullets-with-state). Outside that, the abstraction tax outweighs the gain, and agent-written ECS code adds indirection without the perf need.
 - Do not recommend introducing ECS to a project that lacks one; do support projects that have one.

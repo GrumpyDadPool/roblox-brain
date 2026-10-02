@@ -22,7 +22,7 @@ For a Server Authority project, inputs that affect the core simulation should us
 | `VREnabled` | bool | VR headset active |
 | `PreferredInput` | Enum.UserInputType | Device the player is **currently using most**. Better than per-device flags on hybrids. |
 | `MouseBehavior` | Enum.MouseBehavior | `Default`, `LockCenter`, `LockCurrentPosition` |
-| `MouseDeltaSensitivity` | number | 0–1, sensitivity multiplier |
+| `MouseDeltaSensitivity` | number | 0–10, sensitivity multiplier for mouse-movement deltas (`GetMouseDelta()`, `InputChanged`); does not affect the cursor icon or the player's own camera-sensitivity setting |
 | `MouseIcon` / `MouseIconEnabled` / `MouseIconContent` | string/bool | Custom cursor (AssetId, ContentText) |
 | `OnScreenKeyboardPosition` / `OnScreenKeyboardSize` / `OnScreenKeyboardVisible` | Vector2/bool | Mobile/console on-screen keyboard state |
 | `ModalEnabled` | bool | Block all input while a modal is active |
@@ -43,7 +43,8 @@ For a Server Authority project, inputs that affect the core simulation should us
 | `GetConnectedGamepads()` | UserInputType[] | Currently connected gamepads |
 | `GetGamepadState(UserInputType)` | InputObject[] | All active inputs on a gamepad |
 | `GetGamepadConnected(UserInputType)` | bool | Is a specific pad slot connected |
-| `GetDeviceAcceleration()` / `GetDeviceGravity()` / `GetDeviceRotation()` | Vector3 | Current mobile sensor readings |
+| `GetDeviceAcceleration()` / `GetDeviceGravity()` | InputObject | Current mobile sensor reading; `input.Position` carries the force per local device axis |
+| `GetDeviceRotation()` | (InputObject, CFrame) | Rotation-delta InputObject + current device orientation CFrame |
 | `GetFocusedTextBox()` | TextBox? | Currently-focused text input (if any) |
 | `GetStringForKeyCode(KeyCode)` / `GetImageForKeyCode(KeyCode)` | string | Display labels for key bindings |
 | `RecenterUserHeadCFrame()` | () | Reset VR head to current look direction |
@@ -67,9 +68,9 @@ All three only fire when the Roblox client window has focus.
 - `GamepadConnected(UserInputType)`, `GamepadDisconnected(UserInputType)`.
 
 ### Mobile sensors
-- `DeviceGravityChanged(Vector3, rotation)`: fires when accelerometer present + `AccelerometerEnabled`.
-- `DeviceRotationChanged(CFrame, rotation, CFrame)`: fires when gyroscope present.
-- `DeviceAccelerationChanged(Vector3, acceleration)`: fires when accelerometer present.
+- `DeviceGravityChanged(gravity: InputObject)`: fires when accelerometer present + `AccelerometerEnabled`. Read `gravity.Position` (Vector3 gravity force per device axis).
+- `DeviceRotationChanged(rotation: InputObject, cframe: CFrame)`: fires when gyroscope present. `rotation.Position`/`rotation.Delta` carry rotation values; `cframe` is the device's current orientation.
+- `DeviceAccelerationChanged(acceleration: InputObject)`: fires when accelerometer present. Read `acceleration.Position` (force per device axis).
 
 ### Player state
 - `JumpRequest()`: fires on jump key press. Fires multiple times per jump; debounce.
@@ -200,16 +201,18 @@ local function handleMoveUp(_name, state, _input)
     return Enum.ContextActionResult.Sink
 end
 
--- W key + left thumbstick up on any gamepad + mobile button
+-- W key + d-pad up on any gamepad + mobile button
 CAS:BindAction("MoveUp", handleMoveUp, true,
     Enum.KeyCode.W,
-    Enum.PlayerActions.MoveUp   -- also binds default WASD / stick
+    Enum.KeyCode.DPadUp -- digital gamepad alternative
 )
 ```
 
 Gate handlers on `state`, not on `input.KeyCode`: touch-button input also arrives with `KeyCode.Unknown`, so a key-code filter on the start path would drop mobile presses too. Call `UnbindAction` on context exit; the `Cancel` delivery then clears the running state.
 
-For movement bindings, prefer `Enum.PlayerActions` (e.g. `MoveForward`, `Jump`); they automatically bind to WASD, arrows, left stick, and d-pad across platforms.
+`Enum.PlayerActions` is deprecated in favor of `Enum.KeyCode` and should not be used in new work; its items are `CharacterForward`/`CharacterBackward`/`CharacterLeft`/`CharacterRight`/`CharacterJump` (no `MoveUp`/`MoveForward`/`Jump` members — old examples using those fail on lookup). Bind explicit `Enum.KeyCode` entries per platform instead, as above.
+
+For analog movement, process changing values rather than treating the stick as a digital Begin/End button. `ContextActionService` can report `Change`; `UserInputService.InputChanged` also exposes stick updates through `input.KeyCode == Enum.KeyCode.Thumbstick1` and `input.Position` (see the deadzone pattern below). Use `GetGamepadState()` to initialize held input, or keep the character controller's default movement. The example above uses a digital d-pad binding, not an analog controller.
 
 ## UI Focus and Directional Selection
 
@@ -383,13 +386,17 @@ Use raw `TouchStarted`/`TouchMoved`/`TouchEnded` and maintain your own per-touch
 
 ## Mobile Sensors
 
+The sensor callbacks and getters return `InputObject`s (analogous to key/mouse input objects); the sensor values live on `input.Position`, not on the event argument itself.
+
 ### Accelerometer (gravity direction)
 ```luau
 if UIS.AccelerometerEnabled then
-    UIS.DeviceGravityChanged:Connect(function(gravity, _rot)
-        -- gravity is a unit Vector3 pointing in the direction gravity appears
-        -- to pull on the device. Z is out of screen.
-        ball.BodyForce.Force = gravity * workspace.Gravity * ball:GetMass()
+    UIS.DeviceGravityChanged:Connect(function(gravity: InputObject)
+        -- gravity.Position is a Vector3 showing the force of gravity on each
+        -- local device axis; use it as the direction gravity appears to pull
+        -- the device (Z is out of the screen).
+        local dir = gravity.Position
+        ball.BodyForce.Force = dir * workspace.Gravity * ball:GetMass()
     end)
 end
 ```
@@ -397,9 +404,11 @@ end
 ### Gyroscope (device rotation)
 ```luau
 if UIS.GyroscopeEnabled then
-    UIS.DeviceRotationChanged:Connect(function(cframe, _rot, _prev)
-        -- cframe represents the device's orientation in world space
-        camera.CFrame = CFrame.new(camera.CFrame.Position) * (cframe - Vector3.new(0,0,0))
+    UIS.DeviceRotationChanged:Connect(function(_rotation: InputObject, cframe: CFrame)
+        -- The second argument is the device's current orientation as a CFrame
+        -- relative to its default reference frame. (_rotation.Position/.Delta
+        -- carry rotation values as Vector3s; use `cframe` for orientation.)
+        camera.CFrame = CFrame.new(camera.CFrame.Position) * cframe.Rotation
     end)
 end
 ```
@@ -540,7 +549,7 @@ end)
 - **Reading `MouseWheel` from InputBegan.** Wheel events only fire `InputChanged`.
 - **Touching `IsKeyDown` in a tight loop without throttling.** It's cheap but RenderStepped is the right cadence.
 - **No debounce on JumpRequest.** Fires once per frame the jump key is held.
-- **Mixing `PlayerActions` with `KeyCode` in a single binding.** Use one or the other, not both. `PlayerActions` maps to the platform's natural input.
+- **Recommending deprecated `PlayerActions` for new bindings.** Mixing it with `KeyCode` is legal, but new code should bind explicit `Enum.KeyCode` entries instead (`Enum.KeyCode.DPadUp` covers the gamepad d-pad).
 - **Setting `MouseBehavior = LockCenter` and forgetting to reset it.** Reset on player leave or context exit.
 - **Bypassing `ContextActionService` because it "feels indirect."** Most gameplay bindings should use CAS: it correctly handles chat/text-box conflicts for free.
 - **Auto-creating touch buttons beyond the 7 limit.** BindAction silently refuses to create the 8th button.

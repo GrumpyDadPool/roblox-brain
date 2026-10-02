@@ -2,6 +2,27 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Tooling guidance for Rojo syncback previews, Lest testing backends, and using Wally dependencies through pesde.
+- Modern raycast filtering guidance with `IncludeInstances` and `ExcludeInstances`.
+- API drift checks for `vector.lerp` and the digital gamepad input used in the movement example.
+
+### Changed
+
+- Tooling guidance distinguishes Wally CLI release age from registry activity, uses the project's existing manager or Rokit, and updates the example Rojo and Selene pins.
+- Removed an unsupported ECS project-status claim and corrected pesde attribution.
+
+### Fixed
+
+- Corrected mobile sensor callback signatures, gravity and rotation examples, and the mouse sensitivity range.
+- Replaced invalid movement enum items with explicit keyboard, digital gamepad, and touch bindings.
+- Corrected GUI respawn persistence guidance and documented inset-adjusted hover hit-testing, with live Studio verification still required.
+- Corrected LineForce attachment roles and the condition under which its force cap applies.
+- Corrected `vector.lerp` availability and removed the blanket claim that passing a table to a function seals it.
+
 ## [2.1.0] - 2026-09-25
 
 ### Added

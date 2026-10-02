@@ -2,7 +2,7 @@
 
 All notable changes to `roblox-brain` are documented here.
 
-## [Unreleased]
+## [2.2.0] - 2026-10-02
 
 ### Added
 

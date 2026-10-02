@@ -1,9 +1,10 @@
 ---
 name: roblox-luau-patterns
 description: "Use for Roblox module boundaries, object lifecycles, signals, task scheduling, fallible calls, and cleanup in Luau."
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-02
 sources:
   - https://luau-lang.org/
+  - https://luau.org/library
   - https://create.roblox.com/docs/reference/engine/classes/ObjectValue
   - https://create.roblox.com/docs/reference/engine/classes/StringValue
   - https://create.roblox.com/docs/reference/engine/classes/CFrameValue

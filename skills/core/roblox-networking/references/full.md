@@ -136,6 +136,93 @@ For combat, check at least:
 
 A client-side hit effect is presentation. The server's damage decision is the game result.
 
+## 3a. Latency-aware hit validation: shared clock, bounded rewinds
+
+When the outcome depends on *when* something happened (melee swings, projectiles, dashes), the server's
+view of the world is stale by about one round-trip. The mechanics below use one clock and two
+validation strategies; all claims are verified against the [Workspace docs](https://create.roblox.com/docs/reference/engine/classes/Workspace#GetServerTimeNow)
+unless labeled practitioner.
+
+**The shared clock: `workspace:GetServerTimeNow()`.** Available on client and server, it returns the
+client's (or server's) best approximation of server time as a Unix timestamp. Its documented
+properties are exactly what a validator needs — and what it does *not* guarantee defines your
+tolerances:
+
+- Monotonic: the value never decreases on a connection.
+- Smoothed to move at the same rate as the local clock to within 0.6%.
+- It is an *approximation*: clients disagree with the server by a small offset that includes their
+  network delay, not by a fixed published number. Practitioner threads report a few milliseconds of
+  variation on healthy connections ([accuracy thread](https://devforum.roblox.com/t/about-how-accurate-is-getservertimenow/3926695));
+  treat that as community data, not a spec. Sizing your window must come from your own latency
+  measurements (see the budget method in §7a).
+- It throws on a client that isn't connected, and the docs explicitly say it is **not secure** for
+  things like timed rewards — track those server-side.
+
+**Never trust a client timestamp as proof.** A client can send any number it likes, including a
+`GetServerTimeNow()` value it captured earlier or fabricated. The timestamp is *context*, never
+*authorization*: an echoed timestamp proves nothing on its own. Server-side time arithmetic
+(`GetServerTimeNow()` on the server, `os.clock()` for intervals) is the only clock that decides
+outcomes; `tick()` and client `os.time()` never authorize anything. A fabricated timestamp can still
+be *plausible*, so the defense is bounding + cross-checks, not the timestamp itself:
+
+1. **Freshness bound:** reject claims whose stamp is older than your max tolerance
+   (`now - stamp > MAX_LATENCY_WINDOW` → reject or flag). Practitioner rollback systems use a
+   configurable cap (e.g. 0.5 s) plus an interpolation-buffer addend for character replication delay
+   ([RollbackHitbox write-up](https://devforum.roblox.com/t/rollbackhitbox-server-authoritative-lag-compensation-for-roblox-shooters-open-source/4553295)
+   — practitioner design, verify before adoption). A client that always claims the oldest allowed
+   stamp is the expected adversarial case, which is why the rewind window is a deliberate tradeoff,
+   not a security boundary: a bigger window is more forgiving and more abusable; pick it from
+   measured RTT distribution plus the interpolation buffer, and accept that the abusable tail exists.
+2. **In-flight event matching:** keep a small set of server-initiated or previously-seen events
+   (swing id, projectile id) and require the claim to reference one; unknown or reused ids reject.
+3. **Plausibility cross-checks:** attacker alive and cooled down; claimed origin within a bounded
+   distance of the attacker's *server-observed* position; target range/LOS checked against server
+   state.
+
+**Dynamic targets vs static geometry — re-validate the right thing.** For static geometry (walls,
+terrain), the server can simply re-raycast from the claimed origin: the geometry cannot have moved,
+so a server raycast is the ground truth and beats trusting the client's hit call. For *dynamic*
+targets, a server re-raycast against current positions silently punishes every high-latency player:
+the target has moved on since the client's frame. Instead validate plausibility with tolerance —
+range at claim time, LOS from the rewound viewpoint, and for deterministic paths reconstruct the
+projectile position from stamp delta × known speed and check claimed victims against the reconstructed
+volume with a few studs of slack. Failure of a tolerance check is suspicion, not proof: score it
+(§8) rather than punishing one packet.
+
+```luau
+-- Server: melee swing validation (illustrative; tune from your own latency data)
+type Swing = { id: string, stamp: number, origin: Vector3, target: Model? }
+
+local MAX_AGE = 0.35 -- freshness window: re-derive from measured RTT + interpolation buffer
+local pending = {} -- [player] = { [swingId] = expiry } filled when the swing anim starts
+
+local function validateSwing(player: Player, claim: Swing): boolean
+    local now = workspace:GetServerTimeNow() -- server-side read is authoritative
+    local entry = pending[player]
+    local swing = entry and entry[claim.id]
+    if not swing or now > swing.expiry then
+        return false -- unknown, reused, or expired swing id: reject without punishment
+    end
+    entry[claim.id] = nil -- consume: a swing id cannot be replayed
+    if typeof(claim.stamp) ~= "number" or claim.stamp ~= claim.stamp
+        or now - claim.stamp > MAX_AGE or claim.stamp > now + 0.25 then
+        return false -- stale or future-stamped: reject
+    end
+    local char = player.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+    if not root or (root.Position - claim.origin).Magnitude > 8 then
+        return false -- claimed origin implausible vs server-observed position
+    end
+    return true -- damage itself is computed server-side from server state
+end
+```
+
+Note what the example does *not* do: it never compares `claim.stamp` to the client's word about
+latency, never grants damage because a timestamp "looks right", and never punishes on a single
+failure — an expired swing id from a laggy client is indistinguishable from a forged one, so both
+just get a `false`.
+
 ## 4. Per-player throttling
 
 Use a monotonic clock and clean entries when players leave. A limiter should reject bursts without turning normal network jitter into a ban.
@@ -207,7 +294,10 @@ For typed wrappers, `RbxUtil` exposes `TypedRemote` and `Comm`. They can improve
 
 ## 7. Measure packet budgets
 
-Track both payload size and frequency. A small payload fired every frame can be worse than a larger payload sent occasionally. The community `RemotePacketSizeCounter` resource is useful for estimating supported datatype sizes and testing the 1000-byte unreliable-event ceiling, but its own documentation notes that some Roblox encoding behavior is undocumented and has edge cases.
+Track both payload size and frequency. A small payload fired every frame can be worse than a larger
+payload sent occasionally. The community `RemotePacketSizeCounter` resource is useful for estimating
+supported datatype sizes and testing the 1000-byte unreliable-event ceiling, but its own documentation
+notes that some Roblox encoding behavior is undocumented and has edge cases.
 
 Record at least:
 
@@ -217,15 +307,83 @@ Record at least:
 - reliable versus unreliable transport;
 - player count and representative latency.
 
-Do this in a test place with realistic load. A local ping measurement is not a network-budget benchmark.
+Do this in a test place with realistic load. A local ping measurement is not a network-budget
+benchmark.
 
-## 7a. Replicate state to subscribed clients
+## 7a. Payload/rate budget method (with recipients, fanout, and diffs)
+
+The per-event rows above only matter summed into a *budget*, and the budget lives per direction per
+server. Build it deliberately, from measured numbers — never from a library's benchmark table:
+
+1. **Enumerate every remote** with: fire rate at max realistic concurrency (peak fight, not average),
+   bytes per call measured in a test place (§7), and — the step most budgets skip — **recipients per
+   call**. `FireAllClients` multiplies bytes by the player count and fanout is the dominant term for
+   broadcast events; a 200-byte event to 40 players every frame is ~19 KB/frame ≈ 1.1 MB/s.
+2. **Classify each event** replaceable (unreliable-eligible; a newer value supersedes a lost one) vs
+   must-arrive (reliable, and then count its retransmission cost under packet loss too). Reuse the §6
+   decision; the budget does not change it.
+3. **Budget per direction:** client→server traffic scales per player (N players = N uplinks); server
+  →client scales per recipient (N players × recipients per event). Compare against the Developer
+   Console's measured baseline under load, not a number someone quoted.
+4. **Snapshot vs diff:** for state many clients observe, send a full snapshot only on join (and after
+   a replaceable-data gap), then per-tick diffs of changed fields (see "Replicate state to subscribed
+   clients" below). A diff that always includes 90% of fields is a snapshot with extra steps —
+   measure the actual changed-field distribution before believing the diff is small.
+5. **Unreliable cap as a hard invariant:** every unreliable event payload must stay under the
+   documented 1000-byte ceiling — payloads over it are *dropped*, not truncated ([UnreliableRemoteEvent
+   docs](https://create.roblox.com/docs/reference/engine/classes/UnreliableRemoteEvent)). Encoding
+   makes pre-fire size hard to predict (buffers and other types compress), so verify by test firing
+   and reading Studio's over-limit warning, not by counting your table's fields. Put the check in
+   review: any new unreliable event gets a measured payload size next to its definition.
+6. **Re-verify after changes:** a budget built once rots silently. Re-run the §7 measurement when a
+   remote's rate, payload, or recipient set changes, and when player-count ceilings change.
+
+## 7b. Replicate state to subscribed clients
 
 For a state object that many clients must observe, avoid re-sending whole tables per change. Keep the state server-owned and let clients subscribe by a token or name; each client receives an initial snapshot plus delta updates for only the fields that changed. Community replication modules (e.g. Replica, successor to ReplicaService, https://devforum.roblox.com/t/replica-server-to-client-state-replication-module/3216980) implement this pattern; you can also build it with a single state RemoteEvent carrying a versioned delta. Keep creation and mutation server-side so the client subscription is a read-only mirror.
 
-## 7b. Shrink payloads with binary serialization
+## 7c. Shrink payloads with binary serialization
 
 When a high-frequency remote exceeds budget, replace high-precision tables with compact typed fields. Pick the smallest precision that reads correctly per field (a quantized `CFrame` or low-bit float for positions, a small integer for counters) rather than always sending 64-bit values. Community serialization modules (e.g. Bitstream, https://devforum.roblox.com/t/bitstream-%E2%80%93-binary-framework/4788654) provide typed, precision-varied formats; keep a schema/version so both sides agree on field order and size. Prefer this for replaceable, high-frequency data (positions, aim), not for state that must be exactly once and easily debugged.
+
+## 7d. Typed IDL / generated network modules (blink et al.)
+
+Schema-first compilers (blink, Zap, and similar IDL tools) generate the remote plumbing from a
+declarative schema: typed payloads, compact buffer encoding, and compile-checked call sites. Adopt by
+criteria, not fashion:
+
+- **Adopt when:** payloads have grown beyond a handful of fields across many remotes, multiple people
+  (or agents) edit the wire contract, or bandwidth actually shows in the budget from §7a. For a game
+  with five remotes, a raw `RemoteEvent` layer plus the validation discipline of §2 is simpler and has
+  one less build dependency. Follow the project's existing choice if it already has one.
+- **Pin the schema, verify the regen.** Pin the compiler's version the same way as any tool
+  (`roblox-tooling` version-pinning). Run codegen in CI on every change to the schema or its inputs,
+  and gate on the *generated artifact*, not just the exit code: assert the output files exist,
+  regenerate cleanly, and diff-check in review. A stale generated module that still compiles is the
+  classic silent failure — hand-edited types drift from the schema and nobody notices until a payload
+  misreads. A generator may also exit 0 on partial failure classes, so "it didn't error" is not
+  evidence the module matches the schema.
+- **Malicious read-side validation is still yours.** Generators validate the *writer's* side at
+  compile time and (per blink's documented behavior) validate incoming builtin-primitive data before
+  it reaches handlers. That is not a security boundary: struct/map/enum-shaped values are not fully
+  checked by such tools, and **every client argument remains attacker-controlled** regardless of the
+  type system — a schema guarantees shape, never semantics. State checks, cooldowns, range, and
+  server-owned outcomes (§2, §3) still apply at every handler, including generated ones. Compression
+  also makes traffic harder to snoop with RemoteSpy, which is a nuisance-reduction, not a defense:
+  assume payloads are still readable to a determined attacker.
+- **Call modes are per-event decisions.** A schema declares per event whether it is reliable or
+  unreliable and which listener API exists (e.g. blink's `Call: SingleSync/ManySync/SingleAsync/
+  ManyAsync/Polling`, with sync listeners documented as unable to yield). Pin each event's mode to its
+  delivery requirement (§6 rules) and verify against the pinned version's docs, not memory — mode
+  semantics and limits change between compiler versions.
+- **The 1000-byte unreliable cap is not compiler-enforced.** An IDL will happily emit an unreliable
+  event whose serialized payload exceeds the ceiling, and Roblox drops such payloads silently at
+  runtime (§7a). Add a build-time or CI size check on unreliable event definitions (measured or
+  worst-case serialized size), because neither the schema nor the type system will catch it.
+- **Failure modes to watch:** schema changes that rename a field silently mismatch deployed older
+  clients (version the wire, not just the module); generators that re-order struct fields change the
+  binary layout (regenerate both sides atomically); and per-VM codegen output must not be hand-edited,
+  which is exactly what the CI regen gate above exists to catch.
 
 ## 8. Movement and physics checks
 
@@ -368,6 +526,11 @@ When a sent message matches a `TextChatCommand` alias, the command sinks it serv
 - [ ] Long work cannot be forced through an unbounded `RemoteFunction`.
 - [ ] Reliable and unreliable transports are chosen by data semantics, not by a blanket performance claim.
 - [ ] Packet size and fire rate are measured for high-frequency remotes.
+- [ ] Payload/rate budget exists per direction (rate × bytes × recipients); snapshot-on-join + diffs for observed state.
+- [ ] Unreliable payloads verified under the 1000-byte ceiling by test firing, not field counting.
+- [ ] Time-sensitive claims validated with a shared clock (`GetServerTimeNow`), freshness bounds, and in-flight ids; client timestamps never authorize outcomes on their own.
+- [ ] Static geometry re-raycasts server-side; dynamic targets validated with tolerance, not current-position raycasts.
+- [ ] If a typed IDL/generator is used: version pinned, CI regen gate on generated output, read-side semantic validation intact at handlers, unreliable size check in CI.
 - [ ] Player cleanup removes limiter, subscription, and connection state.
 - [ ] Suspicion handling tolerates false positives and does not expose private data.
 - [ ] Server Authority projects: the six-setting bundle verified and prediction/rollback behavior understood before review sign-off.

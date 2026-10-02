@@ -8,6 +8,7 @@ sources:
   - https://create.roblox.com/docs/scripting/locations
   - https://create.roblox.com/docs/scripting/security/access-control
   - https://create.roblox.com/docs/reference/engine/classes/CollectionService
+  - https://raw.githubusercontent.com/Ukendio/jecs/v0.11.0/README.md
   - original
 ---
 
@@ -15,7 +16,7 @@ sources:
 
 ## When to Load
 
-Load when code ownership is unclear, a feature crosses client and server, startup order matters, or a module is being split. Do not load merely to add a service/controller framework to a small feature.
+Load for ownership, client-server boundaries, startup, or module splits. Do not add a framework without evidence.
 
 ## Quick Reference
 
@@ -29,27 +30,30 @@ For each behavior, name:
 - persistence or network boundary;
 - startup and teardown conditions.
 
-Group by feature when that keeps one change together. Split server, client, and shared code only where the runtime boundary requires it. Shared code has no secrets or authoritative mutable state: replicated code is readable by clients.
+Group by feature when that keeps one change together. Split server, client, and shared code only where the runtime boundary requires it. Shared code has no secrets or authoritative mutable state.
 
 ### Use the smallest dependency shape
 
-Direct module calls are the default for a stable dependency. Use a signal when one publisher has genuinely independent observers. Do not add a global event bus, dependency container, manager class, or `Init`/`Start` ceremony to hide an ordinary dependency.
+Direct module calls are the default. Use a signal only when one publisher has genuinely independent observers. Do not add an event bus, dependency container, manager class, or `Init`/`Start` ceremony to hide an ordinary dependency.
 
-Keep module top-level work cheap and non-yielding. A small bootstrap owns only startup that truly needs ordering; call ordered startup sequentially and fail visibly. Concurrency must be explicit and safe, not automatic `task.spawn` around every module.
+Keep module top-level work cheap and non-yielding. A small bootstrap owns startup that needs ordering; call it sequentially and fail visibly. Concurrency must be explicit and safe, not automatic `task.spawn` everywhere.
 
-Bound `WaitForChild` when a dependency arrives through replication and handle
-timeout. An unbounded wait turns a missing instance into a silent hang.
+Bound `WaitForChild` when a dependency arrives through replication; an unbounded wait turns a missing instance into a silent hang.
 
 ### Enforce runtime authority
 
-The client presents input and prediction. The server validates and decides authoritative outcomes. Remotes are APIs with types, bounds, state, ownership, abuse controls, and failure behavior. Route implementation details to `roblox-networking` and `roblox-security`.
+The client presents and predicts; the server validates and decides. Remotes are APIs with types, bounds, ownership, abuse controls, and failure behavior. Route details to `roblox-networking` and `roblox-security`.
 
 ### Split only for evidence
 
-Split when there is a separate lifecycle or authority boundary, a distinct persistence contract, an independently testable pure core, or unrelated reasons to change. Do not split for folder symmetry or speculative reuse.
+Split when there is a separate lifecycle or authority boundary, a distinct persistence contract, an independently testable pure core, or unrelated reasons to change.
+
+### Data-oriented alternative: only on evidence
+
+An ECS earns its cost only when many similar entities update every frame by order-independent logic, or cross-cutting queries replace tangled per-entity scripts; hooks enforce invariants, ordered systems decide. Version-specific pitfalls: full.md "ECS on Roblox".
 
 ### Review
 
-One canonical owner per mutation, no hidden startup yield or replicated trust decision, explicit cleanup, and the smallest traceable structure. Tags are discovery, attributes configuration, one owner for attach/remove cleanup.
+One canonical owner per mutation, no hidden startup yield or replicated trust decision, explicit cleanup, smallest traceable structure. Tags are discovery, attributes configuration, one owner for attach/remove cleanup.
 
 > Detailed layouts, dependency rules, and startup examples: [references/full.md](references/full.md)

@@ -265,6 +265,47 @@ openTween:Play()
 
 If the object can be destroyed before the tween completes, connect cleanup to the owner's lifetime rather than assuming `Completed` will always run.
 
+## Reactive UI libraries: scope, lifetime, and lists
+
+Native instances (everything above) are the default. Some projects use a reactive UI library instead — [Fusion](https://elttob.uk/Fusion/0.3/) (dphfox/Fusion, 0.3 line), [Vide](https://github.com/centau/vide), [Fluid](https://github.com/ffrostfall/fluid) (Vide-derived, MIT, v0.6.5), or React-Luau. Follow the project's existing choice; do not introduce one into a native-UI project to avoid writing a few render functions. The rules below are library-neutral; the per-library notes were verified against each repo and its docs (2026-10).
+
+### Two lifetimes: session state vs screen state
+
+- Session-length state (player stats, settings, currency display) lives in a module created once per session. Screens consume it; they do not own it.
+- Per-open UI (menus, shop, HUD screens) gets a fresh reactive scope/root each time it opens and is destroyed on close.
+- Putting mutable game state inside a screen's scope destroys it on the first close. Putting screen widgets in a session/root scope leaks them.
+
+### Who cleans up what (the differences are the decision)
+
+- **Fusion (0.3):** every constructor registers a destructor into the scope you pass it, and scope cleanup (`doCleanup`) destroys contents in reverse order (docs: Scopes tutorial, `Computed` API). `Hydrate` inserts the target instance into the scope (verified in `src/Instances/Hydrate.luau`), so hydrating a designer-built instance means scope cleanup destroys it — clone the instance first if it must survive the scope.
+- **Vide:** `cleanup()` accepts functions and supported destroy/disconnect resources, and runs it when the scope reruns or is destroyed. The docs state instances "do not need to be explicitly destroyed for their memory to be freed, they only need to be parented to `nil`", so instance teardown stays a manual idiom: a screen teardown should still unparent its root.
+- **Fluid:** `root()`'s returned destructor tears down the reactive graph — cleanups, dependencies, child nodes — but does **not** destroy Instances created by `create()`; verified in fluid source (`src/reactive/root.luau`, `src/instances/create.luau` register no instance teardown). A screen opened in a loop leaks instances unless an explicit `cleanup(instance)` (which does call `:Destroy()`) or a manual unparent sits at the tree root.
+- General rule for any library: name the single root teardown call per screen, and verify instances are actually removed on close.
+
+### Derived state vs effects
+
+- A value that is a pure function of other state should be derived (computed), not stored and written by three code paths that can drift.
+- Conversely, do not wrap constants in reactive machinery.
+- Side effects do not belong in derived computations. Fusion's docs state recalculations "might be postponed or cancelled if the value of the computed isn't being used" and warn against using computeds "for things like playing sound effects". Put side effects in explicit observers/effects (Fusion `Observer:onChange`/`:onBind`), and expect their callbacks to fire at surprising times — during scope teardown, before the tree is parented — a fatal-throw bug class.
+
+### Keyed list rendering
+
+- Per-entry scopes must be keyed by identity, not array position, or a reorder destroys and rebuilds rows that should have moved.
+- Visible order must come from an explicit layout property (`LayoutOrder`); hash-map output ordering is arbitrary.
+- Duplicate keys misbehave: Vide's `values()` errors on duplicate values under strict mode (`"table source passed to 'values()' contains duplicate values"`) and its docs warn duplicates "can cause unexpected behavior" otherwise. Deduplicate or index before rendering.
+- Exit animations need an explicit leaving-grace (delayed destruction while the tween plays), not an ad-hoc debounce.
+
+### The reopen leak test
+
+Any screen that opens and closes should survive this checklist (original procedure):
+
+1. Record the descendant count of the screen's container at baseline.
+2. Open and close the screen 10 times in a loop.
+3. Assert the count returns to baseline. A growing count means leaked instances; a growing connection count means leaked signals.
+4. Repeat with the screen closed mid-animation and mid-network-response — the two states that expose teardown-order bugs.
+
+Run it from the command bar or as an engine test (see roblox-tooling's test-runner doctrine). It is the reactive-library equivalent of the UI checklist rule that every temporary connection, tween, and row has an owner lifetime.
+
 ## 10. Shops, dialogs, and notifications
 
 A practical UI flow is:

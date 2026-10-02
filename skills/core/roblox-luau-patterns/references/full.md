@@ -57,6 +57,7 @@ Rules:
 - Store mutable state on `self`. Fields on the class table are shared.
 - Prefer composition to metatable inheritance. Inheritance obscures fields, construction, and cleanup, and often produces weak type inference.
 - Give owned resources an explicit `destroy` or equivalent lifecycle only when the object actually owns resources.
+- Share exactly one metatable per type. `__eq` dispatches only when both operands carry the *same* handler — two classes with separate `__eq` handlers silently compare by raw identity. Runtime hook semantics (`__newindex` absent-key interception, `__eq` dispatch, what the table library ignores): see `roblox-luau-core` §7.
 
 Do not wrap a single table in an object merely to imitate another language.
 
@@ -170,6 +171,32 @@ A spawned task has no automatic owner and no automatic error contract. Keep its 
 
 Event-driven work is preferable only when a real event represents the state change. Replacing a measured 10 Hz scan with `Heartbeat` creates a 60 Hz scan. If polling is necessary, choose cadence from responsiveness and cost, then measure it.
 
+### Raw coroutine semantics
+
+`task.*` covers scheduling; `coroutine.*` has its own lifecycle rules that schedulers, worker pools, and cancel-on-leave code hit directly. All points below verified against the live Luau runtime and the engine `coroutine` reference (2026-10):
+
+- **Who owns the error.** `coroutine.resume` returns `false, errorValue` for a failure inside the coroutine (invalid arguments to `resume` can still throw) and the *caller* decides what the error means. `coroutine.wrap` returns a function that *propagates* errors into the calling code (wrap the call in `pcall` yourself). Pick by ownership, not by experience level: `resume` for schedulers that centralize failure handling, `wrap` for producer-style iteration where an error should surface at the call site.
+
+```luau
+local co = coroutine.create(function(word: string)
+	local repetition = word
+	while true do
+		coroutine.yield(repetition)
+		repetition ..= word
+	end
+end)
+
+local ok, first = coroutine.resume(co, "Hi") -- first-resume args go to the body's parameters
+print(ok, first)     -- true  Hi
+local ok2, second = coroutine.resume(co)    -- later args become the yield() results
+print(ok2, second)   -- true  HiHi
+```
+
+- **First-resume arguments are the body's parameters.** There is no pending yield to receive them; only the second and later resumes feed values to earlier `coroutine.yield` calls. Calling `wrap(...)`/`resume(co, ...)` with producer arguments on resume #2 is a classic silent bug: the body never sees them, and the yield receives them instead.
+- **`coroutine.close(co)`** puts a suspended coroutine into the dead state and returns `true` (also `true` for a coroutine that already finished). For a coroutine that stopped on an *error*, it returns `false, message`. Resuming a closed coroutine fails with the ordinary `cannot resume dead coroutine`; there is no separate "closed" state. This is the manual counterpart of `task.cancel` for threads you created yourself — closing cancels the thread without treating the suspension as an error.
+- A coroutine that errored reads `coroutine.status(co) == "dead"`, the same status as one that returned. `resume`'s `false` flag (or `wrap` raising) is the only signal that distinguishes an errored thread from a finished one.
+- Yielding is prohibited inside metamethods regardless of the current thread; see `roblox-luau-core` §11 for the exact boundary behavior.
+
 ## 7. Fallible calls without semantic collapse
 
 `pcall` returns a transport/execution success flag followed by the function's results. A successful function may legitimately return `nil`.
@@ -199,6 +226,21 @@ Retry policy is domain-specific:
 Route persistence to `roblox-data`, purchases to `roblox-monetization`, web calls to `roblox-cloud`, and client requests to `roblox-networking`.
 
 Use `xpcall` when a custom error handler or traceback is part of the diagnostic boundary. Do not add it mechanically around every function.
+
+### Thrown vs returned failure
+
+Luau has no exceptions-as-values; the two failure mechanisms answer different questions, and choosing the wrong one is what produces `pcall`-everything or `assert`-everything code:
+
+- **Return the failure** when it is an expected outcome of the domain: not-found, full, invalid input, cooldown active. Test: a unit test *asserting this failure* would be reasonable. Shape it as `(boolean, string?)` or a tagged result (`Attempt<T>` above) so "success with nil" and "failed" stay distinct.
+- **Throw the failure** (`error`) when the state must never be reachable: a broken invariant, an unhandled case, a misuse of the module's API. The crash is the point; the traceback is the diagnostic. `pcall` around your own module's routine failure is a smell that the module chose the wrong mechanism — and a wrapper layer that converts everything to `nil, err` destroys the distinction for callers.
+- Catch at boundaries where something can actually be done: a remote handler answering the client, a request loop retrying, a connection shutting down. Validate external inputs (remotes, saves, commands) on arrival, at the edge, so inner code can rely on documented validated inputs. Preserve checks for internal invariants and changing state; boundary validation does not eliminate races.
+
+Mechanics that matter for placement (probed 2026-10):
+
+- The `xpcall` message handler runs **before** stack unwinding — it is the only place `debug.traceback` still shows the real error path. A `pcall` receives only the error message; the frames are gone by the time you could format them.
+- `error(msg, 0)` drops the `script:line:` position prefix. Thrown values are not player-facing strings; build user-facing messages at the boundary from the ok flag, never by displaying raw error text.
+- Arguments to `assert(value, buildMessage())` are evaluated eagerly even on success. In a measured hot path, build an expensive diagnostic inside `if not value then ... end`; a constant message does not have this construction cost.
+- The `xpcall` handler may itself error (the call then fails with `error in error handling`) and only its first return value is used as the message.
 
 ## 8. Optional libraries
 

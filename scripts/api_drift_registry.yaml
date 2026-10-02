@@ -815,3 +815,63 @@ entries:
     enum: KeyCode
     item: DPadUp
   verified: 2026-10-02
+- id: networking-shared-server-clock
+  claim: Workspace.GetServerTimeNow supplies the shared clock used in hit validation
+  files:
+  - path: skills/core/roblox-networking/references/full.md
+  teaching_needles: [GetServerTimeNow]
+  check:
+    type: member_exists
+    class: Workspace
+    member: GetServerTimeNow
+  verified: 2026-10-02
+- id: performance-actor-parallel-message-binding
+  claim: Actor.BindToMessageParallel runs the worker callback in parallel
+  files:
+  - path: skills/core/roblox-performance/references/full.md
+  teaching_needles: [BindToMessageParallel]
+  check:
+    type: member_exists
+    class: Actor
+    member: BindToMessageParallel
+  verified: 2026-10-02
+- id: security-filter-nonchat-per-user
+  claim: Non-chat text for one recipient uses GetNonChatStringForUserAsync
+  files:
+  - path: skills/core/roblox-security/references/full.md
+  teaching_needles: [GetNonChatStringForUserAsync]
+  check:
+    type: member_exists
+    class: TextFilterResult
+    member: GetNonChatStringForUserAsync
+  verified: 2026-10-02
+- id: security-filter-nonchat-broadcast
+  claim: Public non-chat text uses GetNonChatStringForBroadcastAsync
+  files:
+  - path: skills/core/roblox-security/references/full.md
+  teaching_needles: [GetNonChatStringForBroadcastAsync]
+  check:
+    type: member_exists
+    class: TextFilterResult
+    member: GetNonChatStringForBroadcastAsync
+  verified: 2026-10-02
+- id: animation-ended-event
+  claim: AnimationTrack.Ended is the post-fade cleanup signal
+  files:
+  - path: skills/gameplay/roblox-animation-vfx/references/full.md
+  teaching_needles: [Ended]
+  check:
+    type: member_exists
+    class: AnimationTrack
+    member: Ended
+  verified: 2026-10-02
+- id: data-scheduled-restart-event
+  claim: DataModel.ServerRestartScheduled supplies advance restart notice
+  files:
+  - path: skills/core/roblox-data/references/full.md
+  teaching_needles: [ServerRestartScheduled]
+  check:
+    type: member_exists
+    class: DataModel
+    member: ServerRestartScheduled
+  verified: 2026-10-02

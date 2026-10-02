@@ -128,7 +128,7 @@ MEDIUM (quality/fairness):
 [ ] Cooldowns enforced server-side (not just client UI)
 [ ] Leaderboard values computed server-side
 [ ] Anti-AFK detection for reward systems
-[ ] Chat filter applied (TextService:FilterStringAsync)
+[ ] TextService filtering applied at submission time with the audience-correct result method (broadcast vs per-user), and failures leave text undisplayed
 ```
 
 ## Patterns
@@ -174,6 +174,48 @@ local function sanitizePlayerStats(stats)
     stats.Gold = math.max(stats.Gold, 0) -- never negative
     stats.Health = math.clamp(stats.Health, 0, stats.MaxHealth)
     return stats
+end
+```
+
+## Text filtering as a workflow (audience-selected result methods)
+
+Player-typed text displayed to other players — signs, pet names, trading chat,
+name inputs, chat-adjacent UI — is the developer's filtering responsibility.
+TextChatService's default channels filter themselves; custom surfaces do not.
+
+The contract is two steps, and the second is where compliance bugs live:
+
+1. `TextService:FilterStringAsync(text, fromUserId, context)` yields and
+   returns a `TextFilterResult`.
+2. Choose the result method by **audience**, not convenience:
+   - `result:GetNonChatStringForBroadcastAsync()` — the text will be shown to
+     everyone on the server/world (signs, leaderboards, global feeds).
+   - `result:GetNonChatStringForUserAsync(userId)` — non-chat text shown to one specific recipient, such as a pet name.
+   A per-user result must not be shown to everyone. A broadcast result is the conservative choice for globally visible non-chat text. `GetChatForUserAsync` is deprecated and returns an empty string; player chat belongs in TextChatService, not a custom non-chat filtering pipeline.
+
+Workflow rules:
+
+- **Stored text needs a retrieval policy.** The text-filtering guide says stored text must be filtered when retrieved, while `FilterStringAsync` currently requires the author to be online on this server. Do not turn a previously filtered string into permanent clearance. Preserve provenance; when current filtering cannot be completed, show a safe predefined placeholder or withhold the text instead of substituting another author's UserId. Resolve the offline-author case against current Roblox guidance before shipping persistent public text.
+- **Filter once per submission**, not per keystroke. From that result, obtain the appropriate audience-specific output; a per-user string is not a broadcast string. Do not blindly retry service failures: the method already implements internal retries.
+- **Fail closed**: if `FilterStringAsync` throws or the pcall fails, display
+  nothing. Never fall back to the raw unfiltered string; store nothing and
+  prompt the author to retry.
+
+```luau
+local TextService = game:GetService("TextService")
+
+-- Illustrative server-side sign editor; validate type, length, authorization,
+-- and rate limits at the remote boundary before calling this function.
+local function setSignText(player: Player, proposedText: string): boolean
+	local ok, filtered = pcall(function()
+		local result = TextService:FilterStringAsync(proposedText, player.UserId)
+		return result:GetNonChatStringForBroadcastAsync()
+	end)
+	if not ok or type(filtered) ~= "string" then
+		return false -- fail closed: sign keeps its previous (filtered) text
+	end
+	signs[player.UserId] = filtered -- filtered display state for this session
+	return true
 end
 ```
 

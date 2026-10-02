@@ -58,7 +58,7 @@ Handling the request once it arrives:
 
 - Roblox sends a daily message listing RTBF requests requiring action. When one appears, verify the corresponding data is removed within 30 days. <!-- temporal: 2026-09 -->
 - For data outside your templates (custom schemas, non-data-store storage), configure a creator webhook with the Right to Erasure Request trigger. Its payload carries `EventPayload.UserId` and `EventPayload.GameIds`; verify the `Roblox-Signature` header before acting on it.
-- A `RemoveAsync` deletion is a soft delete: the key reads back `nil`, but older versions stay retrievable during their retention window (see section 5b). Decide whether your erasure flow must also cover version history.
+- A `RemoveAsync` deletion is a soft delete: the key reads back `nil`, but older versions stay retrievable during their retention window (see section 5c). Decide whether your erasure flow must also cover version history.
 
 ## 2. Define a serializable schema
 
@@ -244,7 +244,15 @@ local transfer = {
 
 **(c) Dedup written, enqueue absent.** A webhook receiver records the notification ID in a durable dedup store, then crashes before the grant or enqueue is durable. If Roblox redelivers, the dedup hit drops the event: acknowledged but never acted on. Recovery owner: the receiver's own worker, and the fix is ordering. Make the work record itself the dedup record by writing the job or grant keyed by notification ID in one durable write before acking, or write the work record first and keep the worker idempotent by notification ID. A durable work record without an ack is safe, because the worker can still process or retry it; the reverse order is the loss.
 
-## 5b. Batch reads and request budgets
+## 5b. Durable acknowledgements (grant/ack ordering)
+
+Operations whose caller is told "done" — a purchase, a quest completion, a reward — follow one ordering rule: **acknowledge only after persistence**, and replay the *same* operation on unknown outcomes.
+
+- **Unresolved ≠ failed.** A write timeout or transport failure can leave the commit outcome unknown. A library's `false` result may instead mean refusal or another documented state; interpret that library's contract, not the boolean alone. The correct response is to retry the same idempotent operation, never to re-grant value on the ambiguous result (double-grant failure mode). The same reasoning drives `ProcessReceipt`'s retry semantics in `roblox-monetization` §3: return the not-processed answer until persistence is confirmed, so the platform retries instead of the game losing or duplicating a paid grant.
+- **Idempotency key per intent.** Key the durable record to the player's *intent* (transaction id, request id) so replays of the same operation collapse: the write is "record grant X if and only if X is not already recorded", and the ack follows that record's success.
+- **Distinguish refusals from retries.** A framework or validation refusal (bad amount, unsupported schema) is terminal and must not be retried; an unknown outcome is retryable. Conflating them either drops entitled grants or hammers a failing store.
+
+## 5c. Batch reads and request budgets
 
 `GlobalDataStore:BatchGetAsync(keys, options?)` retrieves multiple keys in a single request, but per the docs it is currently only supported on `OrderedDataStore`: calling it on a standard `GlobalDataStore` or `DataStore` throws an error. It returns a dictionary mapping each key to a table with a `value` field; keys that do not exist are omitted from the result rather than returned as nil. The `keys` array must contain at least one key and no more than a server-configured maximum (default 100); each call counts against the ordered read budget based on the number of keys requested.
 
@@ -337,6 +345,35 @@ end)
 ```
 
 The example shows ownership, not a complete save library. Add timeouts, completion tracking, and an explicit policy for failed final saves.
+
+## 7a. Scheduled restarts (`ServerRestartScheduled`)
+
+Planned restarts provide advance notice. The example below is illustrative; define the countdown remote and integrate the existing save/round lifecycle before using it:
+
+- `game.ServerRestartScheduled` fires with `(restartTime: DateTime, source: CloseReason, attributes: Dictionary)`. `source` distinguishes `Enum.CloseReason.DeveloperUpdate` (Restart Servers) from `Enum.CloseReason.RobloxMaintenance`; `restartTime` is the *earliest* shutdown time, not an exact moment.
+- The Creator Hub supports restarting outdated servers only. Roblox handles migration on restart; a round-break teleport is optional control over timing, not a requirement to prevent players being stranded on old servers.
+- Use the lead time: set `restartPending`, stop starting rounds, and move players at a **round break** (keeps match state out of the handoff). Forward `restartTime` and `attributes` (e.g. `attributes.message`) to clients via a RemoteEvent for countdown UI.
+- Save lifecycle: use this advance notice — flush saves while players are still connected, let normal `PlayerRemoving`/`BindToClose` handling finish, and do not double-release profiles on the way down.
+
+```luau
+local Players = game:GetService("Players")
+local restartPending = false
+
+game.ServerRestartScheduled:Connect(function(restartAt: DateTime, source: Enum.CloseReason, attributes: {[string]: any})
+	restartPending = true
+	for _, player in Players:GetPlayers() do
+		-- client countdown UI reads restartAt and attributes.message
+		countdownRemote:FireClient(player, restartAt.UnixTimestampMillis, attributes.message)
+	end
+end)
+
+-- At the next round boundary:
+-- if restartPending then
+-- 	TeleportService:TeleportAsync(game.PlaceId, Players:GetPlayers()) -- hop to a current-version server
+-- end
+```
+
+Treat the restart hop as any other teleport: opaque ticket, `pcall`, and the durable-session flush order from `roblox-cloud` §8.6 apply unchanged.
 
 ## 8. ProfileStore integration (optional)
 
@@ -454,7 +491,7 @@ Before destructive tests (wipe scripts, migration replays, bulk-key writes), con
 
 ## 10. Limits and quotas (verified formulas)
 
-All formulas below come from the data store error-codes-and-limits page and scale with concurrent users; they are current as of the last_reviewed date. Do not hardcode sampled values; read live headroom with `GetRequestBudgetForRequestType` (section 5b). <!-- temporal: 2026-09 -->
+All formulas below come from the data store error-codes-and-limits page and scale with concurrent users; they are current as of the last_reviewed date. Do not hardcode sampled values; read live headroom with `GetRequestBudgetForRequestType` (section 5c). <!-- temporal: 2026-09 -->
 
 Experience-level shared limits (requests per minute, all servers plus Open Cloud combined). `concurrentUsers` is the experience's total concurrent user count:
 

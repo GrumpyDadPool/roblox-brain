@@ -1,8 +1,9 @@
 ---
 name: roblox-security
 description: "Use when auditing Roblox code for exploit vectors, authority models, remotes, economy, and DataStore flows."
-last_reviewed: 2026-09-13
+last_reviewed: 2026-10-02
 sources:
+  - https://create.roblox.com/docs/ui/text-filtering
   - https://create.roblox.com/docs/scripting/security/security-tactics
   - https://create.roblox.com/docs/scripting/security/client-server-boundary
   - https://create.roblox.com/docs/projects/server-authority
@@ -15,7 +16,7 @@ sources:
 
 ## When to Load
 
-Load for exploit audits and hardening: authority models, remote abuse, economy, DataStore flows, native bans, sandboxing. Use `roblox-networking` for validation and rate limiting.
+Load for authority, remote abuse, economy, saves, bans, or sandboxing audits. Remote validation/rate limits: `roblox-networking`.
 
 ## Quick Reference
 

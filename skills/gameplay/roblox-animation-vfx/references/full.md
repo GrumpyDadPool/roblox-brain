@@ -40,6 +40,15 @@ Predicted effects must be reversible. A client can briefly predict an impact, ex
 
 Use animation priority to define which tracks may override the same joints. Keep locomotion and action tracks separate. Use marker signals for synchronized effects instead of guessing a timestamp that changes when an animation is retuned. In Server Authority, resolve the current track after rollback rather than assuming a cached track handle still represents the visible animation.
 
+### Track control surface: Play parameters, weight, and event semantics
+
+- `track:Play(fadeTime, weight, speed)` sets the initial controls; `AdjustSpeed`/`AdjustWeight` change them mid-play. `Speed`, `WeightCurrent`, and `WeightTarget` are read-only; there is no writable `.Weight` property.
+- **Weight convergence**: weight fades toward `WeightTarget` over the fade time; `WeightCurrent` reflects the blend in progress. When a state machine must know the blend has settled, poll `math.abs(track.WeightCurrent - track.WeightTarget) < epsilon` (a small epsilon like 0.01) rather than assuming a fade is instant.
+- **`Stopped` vs `Ended`**: `Stopped` fires on natural end *and* on an explicit `Stop()` (even with a fade); `Ended` fires only after the track has fully finished affecting the pose — after any fade. Hook cleanup/destroy to `Ended`; hook gameplay chaining to `Stopped` and guard against the explicit-stop case.
+- **`DidLoop`** gives loop-count logic (play exactly N cycles) instead of wall-clock guessing against `track.Length`.
+- **Duration math**: at constant positive speed, a full forward pass lasts `track.Length / track.Speed`. `Length` is `0` until loaded; guard readiness and bound waits. Speed `0` pauses playback, so do not divide by it; reverse playback and mid-track starts need separate handling.
+- **Priority in practice**: `Core < Idle < Movement < Action < Action2 < Action3 < Action4`. For joints affected by multiple tracks, priority determines evaluation order, and tracks at the same priority blend by weight. Do not treat enum numeric values as this ordering (Core has a special value), or assume an equal-priority track blocks another regardless of weight.
+
 ```luau
 local attack = loadTrack(animator, ATTACK_ID, Enum.AnimationPriority.Action)
 

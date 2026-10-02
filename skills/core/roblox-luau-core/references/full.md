@@ -50,6 +50,25 @@ print(record[field])
 
 Dictionary iteration order is unspecified. Sort explicit keys or values before emitting stable output.
 
+### `__newindex` fires only for keys the table does not have
+
+An assignment goes through `__newindex` only when the key is absent from the raw table. Once a key exists — including after a single `rawset` inside the hook — later writes bypass the hook while that raw key remains present (verified against the Luau runtime, 2026-10):
+
+```luau
+local log = {}
+local t = setmetatable({}, { __newindex = function(tbl, key, value)
+	table.insert(log, key)
+	rawset(tbl, key, value) -- the write itself must not re-enter the hook
+end })
+t.a = 1 -- hook runs
+t.a = 2 -- raw write: key now exists, hook does NOT run
+```
+
+Two consequences:
+
+- Inside `__newindex`, write with `rawset` or to a separate table. A plain `tbl[key] = value` on an absent key re-enters the hook recursively.
+- A hook that must observe *every* write cannot let the exposed table ever hold the data. Keep the exposed table permanently empty and store the value elsewhere (`store[key] = value` inside the hook); every write then hits the hook because no raw key ever becomes present.
+
 ## 3. Reference and copy semantics
 
 Tables are references. Assignment aliases the same table.
@@ -197,6 +216,35 @@ end
 
 A plausible-looking email regex translated into a Lua pattern is not robust email validation. Validate only the format the product actually needs.
 
+### Equality dispatch with `__eq`
+
+The `__eq` hook is consulted only when both operands carry the *same* handler function (sharing one metatable is a simple way to ensure this). With a handler present, `x == x` also reaches the handler — Luau does not short-circuit self-comparison once `__eq` exists. When the two operands have different `__eq` handlers, Luau calls neither and falls back to raw identity; a handler on only one side is likewise ignored. All of this is live Luau behavior (probed 2026-10), not Lua 5.1 semantics:
+
+```luau
+local Vec = {}
+Vec.__index = Vec
+Vec.__eq = function(a, b)
+	if rawequal(a, b) then -- identity check must not recursively invoke __eq
+		return true
+	end
+	return a.x == b.x and a.y == b.y
+end
+```
+
+The handler's return is coerced to a boolean: any non-nil/non-false value counts as equal, `nil`/`false` as unequal. Consequences:
+
+- Two classes that each define their own `__eq` cannot ever compare equal across types — the cross-type comparison silently ignores both handlers. Share one metatable per type.
+- Put an identity check at the top of expensive handlers; it runs even for `x == x`.
+- `rawequal(a, b)` never dispatches `__eq`; use it for identity checks that must not run user code.
+
+### Library operations ignore metamethods
+
+`#` honors `__len`; `rawlen`, `ipairs`, `pairs`, `table.insert`, and `table.concat` operate on raw storage. Generalized `for ... in t` is different: it can call `__iter`. Do not assume a custom iterator changes how `pairs` or the table library sees a proxy. A proxy whose elements live only behind `__index` iterates as empty and concatenates to `""`; `table.insert(proxy, v)` writes raw storage and skips `__newindex` (all probed 2026-10). Consequences:
+
+- A read-only view or tracking proxy must keep the real data in a raw field (or the backing table) and iterate *that*; iterating the proxy itself finds nothing.
+- `rawlen(t)` is the deliberate raw-length read; keep `__len` off tables that are also used as sequences, or length checks in library calls will disagree with `#`.
+- There is no `__pairs` dispatch in Luau; `pairs` cannot be redirected.
+
 ## 8. Numeric behavior
 
 Luau provides ordinary arithmetic, compound assignment such as `+=`, and floor division `//`. Be explicit around division by zero, negative values, clamping, and units.
@@ -209,8 +257,16 @@ Floor division `//` truncates toward negative infinity (`-7 // 2 == -4`). `0/0` 
 
 - Fixed-size binary data without table overhead: `buffer.create(size)`, then read/write typed values at offsets.
 - Offsets are 0-based, sizes in bytes. Out-of-range access errors; the buffer does not grow.
-- Reads/writes take explicit width and endianness (`readu8`/`readi16`/`readf32` family). No platform-dependent sizing.
-- Do not use `buffer.readinteger`/`buffer.writeinteger`: they appear in some type definitions but are not in the released runtime.
+- The function name selects width and numeric representation (`readu8`/`readi16`/`readf32` family); byte order is fixed, not a selectable argument.
+- Multibyte numeric reads/writes are little-endian; signed integers use two's complement ([luau.org/library](https://luau.org/library)); matters whenever buffer contents cross to an external format.
+- `buffer.readinteger`/`buffer.writeinteger` are 64-bit integer APIs behind the upstream `LuauIntegerLibrary` flag ([runtime source](https://raw.githubusercontent.com/luau-lang/luau/master/VM/src/lbuflib.cpp)). They are present in the local standalone CLI used for these probes, but are not listed in the Roblox buffer reference checked in 2026-10. Do not infer Roblox availability from a standalone CLI or from missing web documentation; verify the target runtime before using them.
+
+Two failure modes behave oppositely — this is the part agents get wrong:
+
+- **Out-of-bounds access errors loudly** (`buffer access out of bounds`): bad offset arithmetic is caught at the call.
+- **A wrong-width read can silently succeed if it stays in bounds.** `readu16` on a slot written as `u32` returns the low bytes, not a schema-mismatch error. `f32` also rounds: a `writef32`/`readf32` roundtrip of `0.1` does not compare equal to the original double. Choose `f32` or `f64` for the required precision; neither makes arbitrary decimal values exact. Out-of-range integer *writes* are also silent, taking the value's least significant bits (`writeu8(b, 0, 300)` stores 44).
+
+Decision rule: all offset and width arithmetic lives inside `get`/`set` helpers keyed by field name; no call site ever computes an offset or picks a width inline.
 
 ```luau
 local bounded = math.clamp(value, minimum, maximum)
@@ -319,6 +375,7 @@ Luau starts from Lua 5.1 and subtracts. When porting Lua code or answering "why 
 | `newproxy` | Accepts `nil`/`false` (bare userdata) or `true` (empty metatable); the generator-function form is gone. |
 | Builtin globals | Libraries, the string metatable, and the builtin globals table are read-only; monkey-patching `string` or `_G` builtin tables fails. Each script gets its own globals table that reads through to the builtins, so per-script globals still work. |
 | `getfenv` / `setfenv` | Still present (legacy code relies on them) but costly to isolation: they can inject globals into callers on the stack. Avoid in new code; `debug.info`/upvalues and module returns cover the legitimate cases. |
+| Yield restrictions | A `coroutine.yield` attempted inside a metamethod raises `attempt to yield across metamethod/C-call boundary` (probed 2026-10). An uncaught error terminates the coroutine. A `pcall` inside the metamethod can catch the error and let execution continue, but cannot make the yield succeed. `pcall`/`xpcall` themselves are the C-function boundaries you *can* yield across from ordinary code. If an `__index` hook needs data that requires waiting, make the wait explicit at the call site instead of yielding inside the hook. |
 
 ## 12. The vector library
 

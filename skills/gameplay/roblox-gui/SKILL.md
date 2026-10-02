@@ -24,6 +24,9 @@ sources:
   - https://devforum.roblox.com/t/what-are-the-best-ui-screeninset-settings-for-buttons/3519333
   - https://devforum.roblox.com/t/screenguiscreeninsets-topbarinsets-regression/4047230
   - https://raw.githubusercontent.com/Roblox/react-luau/main/README.md
+  - https://raw.githubusercontent.com/dphfox/Fusion/main/README.md
+  - https://raw.githubusercontent.com/centau/vide/main/README.md
+  - https://raw.githubusercontent.com/ffrostfall/fluid/main/README.md
   - original
 ---
 
@@ -31,19 +34,20 @@ sources:
 
 ## When to Load
 
-Load when building a HUD, menu, shop, dialog, notification, or UI attached to a 3D object.
+Load for HUDs, menus, shops, dialogs, notifications, or world-space UI.
 
 ## Quick Reference
 
 - `ScreenGui` overlays; `SurfaceGui` on surfaces; `BillboardGui` for world labels.
-- Let `UIListLayout`, `UIGridLayout`, and constraints own repeated layout. Avoid per-frame pixel positioning.
-- Use `Scale` for responsive structure and `Offset` for deliberate padding or fixed-size details.
-- Design for touch and gamepad as well as mouse and keyboard. Bind gameplay actions with `ContextActionService` where it fits.
-- For gamepad UI, set a selected entry point and test directional focus. `GuiService.SelectedObject` is the native baseline.
-- Reuse the project's visual language; let the owner choose art direction. Verify the UI over the game world.
-- Keep UI state separate from the server state that it displays. A button is not an authority boundary.
-- Server Authority UI may show corrected predictions. Show confirmed inventory and currency; route gameplay input through the Input Action System.
-- Make scrolling, text growth, clipping, and safe-area behavior explicit before adding polish.
-- Build custom loading UI in `ReplicatedFirst`; never use a client-side character teleport as the readiness gate.
+- Let layouts and constraints own repeated layout; avoid per-frame pixel positioning.
+- `Scale` for responsive structure; `Offset` for padding/fixed-size details.
+- Design for touch/gamepad too. Use `ContextActionService` for gameplay bindings where appropriate.
+- Test directional focus; set `GuiService.SelectedObject` for gamepad entry.
+- Follow existing visual language and owner art direction; test UI over the game world.
+- UI displays server state; a button is not an authority boundary.
+- Reactive UI: own per-screen cleanup separately from session state; repeat open/close to test leaks (full.md).
+- Server Authority: display confirmed inventory/currency; route gameplay input through Input Actions.
+- Resolve scrolling, text growth, clipping, and safe areas before polish.
+- Loading UI belongs in `ReplicatedFirst`; client character teleports are not readiness gates.
 
-**Need the details?** Load `references/full.md` for layout recipes and UI lifecycle patterns.
+> Layout and lifecycle examples: [references/full.md](references/full.md)

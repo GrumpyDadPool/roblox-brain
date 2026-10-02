@@ -41,6 +41,31 @@ When working with an agentic tool:
 Some tooling improves agent and developer productivity but is not essential to a working Roblox project. An agent should **mention these exist** when a user asks about them or is clearly doing work they would automate (linting, formatting, test orchestration), but **should not impose them** on a project that does not use them:
 
 - **Selene** (lint), **StyLua** (format), **luau-lsp** (editor intelligence), **Lune** (standalone Luau scripts/tests), **Wally/pesde** (packages), **Rokit** (tool manager; Aftman is archived), **Rojo** (files-first sync), **[lest](https://github.com/lest-luau/lest)** (Luau test runner with cloud and Studio backends). [TestEZ](https://github.com/Roblox/testez) is archived; keep it where already used, but do not introduce it as a default for new projects. Where a project has no test runner, lest is one option to mention, not a mandate. Its Studio backend launches edit-mode `RunScript`, not a stepping client playtest; it does not verify hover, live input, or mobile sensors.
+
+### Test-runner doctrine: what each backend can actually prove
+
+Before wiring any test runner (lest, Lune scripts, or a bespoke harness), split suites by what the runtime provides — not by convenience. lest's docs state the transferable rule directly: "**No backend fakes an environment.** Nothing mocks Instances, and nothing reimplements a runtime's standard library. If a test needs an environment, Lest runs it in that environment — partial mocks produce confident wrong tests." (lest `docs/backends.md`, verified 2026-10.)
+
+| Suite type | Where it runs | Can prove | Cannot prove |
+| --- | --- | --- | --- |
+| Pure logic | embedded/plain Luau VM (lest `native`, instant, per-file isolation, line coverage) | algorithms, state machines, pure functions | anything touching engine APIs — a spec requiring one fails loudly, not silently |
+| Script/tooling | real Lune or Lute process (lest `lune`/`lute` backends spawn `lune run`/`lute run`; Lune's `@lune/roblox` library reads/writes place files as data — "more limited API", no running engine) | file transforms, HTTP, place-file manipulation | a live Instance tree with running simulation |
+| Engine | real place: lest `cloud` (Open Cloud Luau task on a fresh game server per spec: `IsServer()` true) or `studio` (launched Studio, **edit-mode** `RunScript` — command-bar permission level, place scripts don't run, physics doesn't step; `IsStudio()` true but `IsClient()` **and** `IsServer()` both true — an edit-mode quirk; branch on `IsStudio()`) | engine APIs, services, DataModel, DataStores-on-cloud, place fixtures | input, hover, rendering, mobile sensors, an actual stepping playtest — no backend covers these; verify those in a real client session |
+
+Key lest facts (verified against its docs, v0.6.0 line, MIT, created 2026-07; distinct from the unrelated 2023 Jest-style `TAServers/lest`):
+
+- Suites declare their backend in `lest.toml`; reporters/snapshots/CI output are backend-independent.
+- Exit codes are a three-way contract: `0` all passed, `1` **test failures**, `2` **tool error** ("the run didn't happen (or measured nothing), and calling that a test failure would be a lie your dashboard then repeats"). CI scripts should branch on 1 vs 2.
+- JUnit (`--reporter junit`) and JSON reporters, Lcov coverage with `--min` gate, snapshot testing, and `--changed origin/main` selective runs are built in.
+- The studio backend "refuses to run under `$CI` on purpose"; engine suites gate on the cloud backend with an Open Cloud key from the CI secret store.
+
+**The CI contract generalizes:** gate on parsed results (JUnit/JSON), not exit code alone — a tool that exits 0 on a failure class, or exits 0 while producing zero outcomes, reports green while testing nothing. If a runner lacks a structured reporter, assert on expected output artifacts (a results file with N passing entries), never on exit code alone.
+
+**Mocking by injection, not interception:** pass fakes through parameters (systems take `world`/`services`; components take props) instead of monkey-patching globals. That is what makes a headless run possible at all, and it matches the architecture skill's "pure core, testable without Roblox wiring" rule. A mock that fakes engine instances produces tests that verify the fake, not the game — prefer splitting the suite so engine-dependent tests run where the engine exists.
+
+**Flaky-test triage order:** isolate timing dependence (fixed clock/seeded RNG), then environment dependence (paths, locale, network), then quarantine-or-delete. Never mask with an unconditional retry — a retry hides real races.
+
+**Pin the runner like every other tool** (Rokit manifest), because a runner/framework version mismatch is a silent behavior-change class. lest documents LPM/rokit pinning for exactly this.
 - **Roblox-TS** (TypeScript-to-Luau compiler): a real production stack used by some studios, with its own tradeoffs; see the language-choice section before recommending it for an agent workflow.
 
 The line: if the user asks "should I add linting/formatting/tests?" or is hand-doing something these automate, offer the option and the tradeoff, then let them choose. If the project already has a toolchain, extend it; do not introduce a new ecosystem unprompted. The exceptions that justify recommendation: files-first source control (Rojo) and CI reproducibility, when the user is clearly trying to version or automate their project.
@@ -111,6 +136,17 @@ Promise = "evaera/promise@4.0.0"
 ```
 
 The names and versions above are examples, not recommendations. Verify package ownership, license, compatibility, and the project's existing conventions before adding a dependency. Do not copy a package into the repository just to avoid documenting it.
+
+### Version specification: how resolution actually fails
+
+These behaviors are verified against Wally 0.3.2 source ([resolution.rs](https://raw.githubusercontent.com/UpliftGames/wally/v0.3.2/src/resolution.rs), [manifest.rs](https://raw.githubusercontent.com/UpliftGames/wally/v0.3.2/src/manifest.rs)) and pesde docs (2026-10); both resolvers evolve, so re-check the pinned CLI version before treating a detail as current:
+
+- **A bare version spec is a range, not a pin.** Wally parses the requirement with `VersionReq`, and in the semver grammar a bare `1.2.0` means a caret-compatible range, not exactly `1.2.0`. "Works on my machine" version drift comes from the spec, not the resolver. Pin with explicit operators when reproducibility matters, commit the lockfile (already required above), and diff the lockfile in review — a review that skips it can approve an unrequested upgrade.
+- **Wally's resolver does not backtrack.** It walks dependencies depth-first picking the newest candidate; when every candidate for a request conflicts with already-activated packages it bails with "All possible candidates for package {req} ... conflicted with other packages that were already installed", and when no candidate matches the realm it bails with "No packages were found that matched". A wedged resolution usually names an incompatible constraint pair — read the error before touching the lockfile. (Do not delete a lockfile as a default fix: it discards the reviewed dependency graph. If a resolver genuinely wedges, fix the constraint in the manifest first; deleting the lockfile is a deliberate, explained action, and the user decides.)
+- **Realm mismatches fail at resolution, not runtime.** In Wally source, `Realm::is_dependency_valid` permits `(Server, _) | (Shared, Shared) | (Dev, _)`: a dependency declared in the shared `[dependencies]` section can only be satisfied by a package whose own realm is `shared`, while `[server_dependencies]` and `[dev_dependencies]` may consume packages of any realm. So a shared dependency on a server-only package fails install with the realm-named error above, before any code runs. Declare realms deliberately; a realm error at install is a manifest error, not a code bug. pesde's targets (`luau`, `lune`, `roblox`, `roblox_server` in `[target].environment`) play the same role; its resolver errors on incompatible target combinations rather than installing something unusable.
+- **pesde's `pesde.lock` records resolved versions** ("contains the exact versions of the dependencies that were installed so that they can be installed again", per its quickstart) — commit it for the same reason as `wally.lock`. The documented recovery for resolver wedges is fixing the dependency graph, not editing the lock by hand.
+- **Verify what ships before the first publish.** Wally's `wally package --list` previews the package contents; its `include` globs are additive over the default set and `exclude` prunes (with `.gitignore` used as the default exclude when `include` is empty). There is no `wally publish --dry-run` flag — `wally package --list` is the dry-run. pesde ships `pesde publish` with a `--dry-run` option per its CLI reference. Publish tools can succeed while uploading less than assumed, so check the listing, not the exit code.
+- **Wally-dependency interop in pesde costs a step.** Configure the index under `[wally_indices]`, then declare a Wally dependency under `[dependencies]`, for example `foo = { wally = "acme/foo", version = "1.2.3", index = "acme" }`, and the docs require a `sourcemap_generator` script "to get proper types support when using Wally dependencies". That script runs during install/linking, so keep the interop as an explicit migration step (script + index config) rather than a background assumption.
 
 ## 4. Pin the toolchain
 

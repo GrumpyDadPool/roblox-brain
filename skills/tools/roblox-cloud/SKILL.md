@@ -1,8 +1,9 @@
 ---
 name: roblox-cloud
 description: "Use for Roblox Open Cloud APIs, API keys, OAuth 2.0, webhooks, scopes, token lifecycle, or in-experience HttpService calls."
-last_reviewed: 2026-09-13
+last_reviewed: 2026-10-02
 sources:
+  - https://create.roblox.com/docs/projects/teleport
   - https://create.roblox.com/docs/cloud/guides
   - https://create.roblox.com/docs/cloud/auth/api-keys
   - https://create.roblox.com/docs/cloud/auth/oauth2-overview
@@ -17,7 +18,7 @@ sources:
 
 ## When to Load
 
-Load for Open Cloud, API keys, OAuth, webhooks, or supported HttpService. Route in-game data work to `roblox-data` and `roblox-server-data`; gameplay and Studio work to domain skills.
+Load for Open Cloud, OAuth, webhooks, HttpService, or teleport handoffs. In-game data: `roblox-data` and `roblox-server-data`.
 
 ## Quick Reference
 
@@ -55,6 +56,6 @@ Public clients cannot hold a secret and require PKCE. Confidential clients keep 
 
 Validate paths, schemas, scopes, permissions, and resource grants separately. Retry only transient failures.
 
-> Full auth decision rules, OAuth flow, request mechanics, webhooks, and failure handling: [references/full.md](references/full.md)
+> Auth and handoff workflows: [references/full.md](references/full.md)
 
 **Awareness, not scripts.** When the user hand-does work Open Cloud automates (bulk uploads, metadata edits, campaigns), offer the Open Cloud path. Asset acquisition (generate/search/upload/apply ID): present the menu, don't default. See `references/full.md` §1.5.

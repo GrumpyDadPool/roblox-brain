@@ -1,27 +1,31 @@
 ---
 name: roblox-performance
 description: "Use when profiling Roblox performance or diagnosing FPS, memory, network, mobile, or hot-path problems."
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/en-us/performance-optimization/microprofiler
   - https://create.roblox.com/docs/en-us/reference/engine/libraries/debug
   - https://devforum.roblox.com/t/huge-memory-leak-prevention-for-everyone-or-most-people-atleast/3099605
   - https://devforum.roblox.com/t/full-release-of-parallel-luau-v1/1836187
+  - https://luau.org/performance
+  - https://create.roblox.com/docs/reference/engine/classes/Actor
+  - https://create.roblox.com/docs/reference/engine/datatypes/SharedTable
+  - https://create.roblox.com/docs/scripting/multithreading
 ---
 
 # Roblox Performance
 
 ## When to Load
 
-Use when profiling, diagnosing lag, or setting performance budgets. For code-level micro-optimizations (pooling, throttling, relevance filtering, lazy loading) load `roblox-luau-patterns`; this skill measures and tunes the engine.
+Use for profiling and performance budgets. Pooling and lifecycle patterns: `roblox-luau-patterns`.
 
 ## Quick Reference
 
 ### Profiling Tools
-- **MicroProfiler (Ctrl+F6)**: Per-frame breakdown: scripts, physics, rendering. Primary tool for finding what's slow.
-- **Developer Console (F9)**: Stats tab: memory, network, render stats. Server Stats for server-side metrics.
+- **MicroProfiler (Ctrl+F6)**: Frame breakdown of scripts, physics, rendering.
+- **Developer Console (F9)**: Memory, network, rendering, and server stats.
 - **Script Profiler (Ctrl+Alt+F5)**: Per-script CPU and heap.
-- **Custom labels**: `debug.profilebegin`/`debug.profileend` name hot regions in the MicroProfiler; `debug.setmemorycategory` names thread memory in the console. Gate behind a flag (full.md).
+- **Labels**: `debug.profilebegin`/`debug.profileend` mark regions; `debug.setmemorycategory` labels memory. Gate instrumentation behind a flag.
 
 ### Performance Targets
 | Metric | Starting target | Investigate at |
@@ -31,12 +35,15 @@ Use when profiling, diagnosing lag, or setting performance budgets. For code-lev
 | Client FPS (mobile) | 45 | < 30 |
 | Memory | device-specific | sustained growth |
 
-"Expensive" means the profiler shows it on a hot frame path (raycasts, clones, large finds, replication-heavy writes). Throttle from measurements, not a universal number; re-profile after shipping. Micro-optimizations live in `roblox-luau-patterns`.
+Optimize measured hot paths, not folklore. Throttle from measurements; re-profile after shipping.
 
 ### Parallel Luau
 - Use Actors only after profiling identifies isolatable CPU work.
 - Workers compute; synchronize before restricted DataModel writes.
-- SharedTable and mutexes add coordination cost; they do not replace ownership boundaries.
+- Do not rely on shared module state across Actors. `SendMessage` copies data; SharedTable supports shared state and atomic updates.
+
+### Hot-loop cost model
+- Luau optimizes global imports; avoid folklore function hoisting/unrolling. Environment impurity can disable optimizations. Profile allocations as well as CPU; GC cost may occur later.
 
 ### Object Pooling
 Pre-clone and reuse. Canonical pool code (token-lease ownership): `roblox-luau-patterns`.

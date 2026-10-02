@@ -249,6 +249,59 @@ local data = TeleportService:GetLocalPlayerTeleportData()
 if data then print("round:", data.round) end
 ```
 
+### Reserved servers: identify the destination instance
+
+When `ShouldReserveServer = true` creates a new reserved server (or a teleport targets an existing `ReservedServerAccessCode`), the destination instance is private: only players you teleport in arrive. Pass the access code forward by teleporting the next group with `TeleportOptions.ReservedServerAccessCode` set. Identify the running server through DataModel properties, not fields invented on `GetJoinData()`:
+
+```luau
+-- Server script inside the reserved server
+local inReservedServer = game.PrivateServerId ~= ""
+-- A developer-created reserved server has no owning user;
+-- a purchased private server has a non-zero game.PrivateServerOwnerId.
+local developerReserved = inReservedServer and game.PrivateServerOwnerId == 0
+if inReservedServer and developerReserved then
+	-- restricted admission: verify the player against server-held state
+	-- (see the opaque-ticket pattern below), never from client claims.
+end
+```
+
+A standard public server reports `PrivateServerId = ""`. A purchased private server reports a non-empty `PrivateServerId` with a non-zero `PrivateServerOwnerId`, which is how the cases stay distinguishable. Treat any non-empty `PrivateServerId` as restricted admission and verify the player's right to be there from server-held state.
+
+### Secure teleport handoff (opaque ticket)
+
+`SetTeleportData` payloads are client-readable, so the payload must never carry authority: no grant amounts, no role strings, no unlocked flags. The verified pattern is an opaque key plus a server-side record:
+
+1. The source server generates an unguessable identifier (for example `HttpService:GenerateGUID(false)`).
+2. Write a per-player ticket record containing the expected UserId, destination PlaceId, intended reservation/match identity, and authoritative round state, with a short TTL. A party needs independently claimable admission per member, not one globally consumed ticket.
+3. Only the opaque id goes into `SetTeleportData({ ticket = id })`.
+4. On arrival, the destination server reads the id from `player:GetJoinData().TeleportData`, reads the record from MemoryStore, verifies the player's UserId is admitted, and consumes it. Unknown, expired, or non-admitted ids fail closed: kick or return the player to the lobby.
+
+Claim through `UpdateAsync`: validate the bound user and destination, then write a claimed-state record with an idempotent claim identifier. Returning `nil` from the transform cancels the update; it does not delete the ticket. Keep the transform side-effect-free because it can run again. Confirm the returned stored claim belongs to this attempt before admitting; an error or unknown outcome is not permission. Retain the claim until TTL expiry so a replay is recognized. A readable ticket is not an authorization proof.
+
+### Failure ladder: pcall throw vs TeleportInitFailed
+
+Distinguish the two failure surfaces and size retries to the cause, not to a fixed schedule:
+
+- **Call failure caught by `pcall`**: classify the error. Do not retry invalid arguments or authorization mistakes blindly; retry only documented transient failures, bounded by a deadline and player/session state.
+- **`TeleportService.TeleportInitFailed(player, teleportResult, errorMessage, placeId, teleportOptions)`** fires per player after initiation, so a group teleport can partially succeed: some arrive, some land here. Branch on the result enum:
+  - `Enum.TeleportResult.Flooded`: too many recent teleport requests. Back off rather than hot-retry. `GameFull` is the distinct destination-capacity result.
+  - `Enum.TeleportResult.Failure` and other retryable results: bounded retry with backoff.
+  - Non-retryable results (for example `Enum.TeleportResult.Unauthorized` with a bad reserved-server code): do not retry; surface to the player.
+- **Straggler policy**: when half a party arrives and half lands in `TeleportInitFailed`, the arriving server holds the match open (or re-teleports stragglers through the reserved access code) instead of starting with a broken group. Decide the wait timeout in product terms, then implement it explicitly.
+
+Keep retry counts and backoff intervals as configuration, not guessed constants: measure real failure rates in a published place before tuning.
+
+### Teleports and the durable session
+
+A teleport moves the player to a server that will re-acquire their profile. The outgoing server must flush durable work *before* the teleport freezes local gameplay, not from `PlayerRemoving` after the connection is gone:
+
+1. Stop granting progress the moment the teleport is accepted.
+2. Use the save wrapper's documented final-save/release lifecycle before `TeleportAsync` when implementing an explicit handoff. Verify completion and failure reporting; calling `EndSession` alone is not a generic proof of durability. Do not start the teleport on an unconfirmed save. The destination still needs bounded acquisition/recovery, not an assumption of instant ownership.
+3. `pcall` the teleport. If the call throws, the player is still connected and local: re-acquire the profile on this server, or disconnect the player cleanly with data already saved — never leave a released lock behind a live session.
+4. If `TeleportInitFailed` fires, the player remains in the source server unless another attempt succeeds. Keep gameplay frozen; re-acquire ownership before resuming, or disconnect cleanly. A released profile cannot remain writable just because the player is still connected.
+
+Cross-reference: session ownership protocol in `roblox-data` §4; ticket records use the MemoryStore patterns in `roblox-server-data`.
+
 ## 8.7 BadgeService (in-experience)
 
 Server-side badge awarding and lookup. Awarding succeeds only when: caller is a server script, the place belongs to the badge's experience, the player is connected, the badge is enabled, and the player does not already have it (award-once per user).

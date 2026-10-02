@@ -328,13 +328,111 @@ local function drain(maxItems: number): (boolean, any)
 end
 ```
 
+### Queue retries and duplication
+
 `ReadAsync` makes items temporarily invisible to other readers. A crashed worker can therefore leave work to reappear later. Make processing idempotent, include a request or match identifier, and remove an item only after the durable or teleport-side effect has succeeded. Keep the invisibility timeout long enough for the work but short enough to recover from a dead server.
 
-### Sorted-map pattern
+Two failure classes live inside "processing failed":
+
+- **The work clearly did not happen**: retry only transient failures and normally let the original item become visible again. Do not re-add it while the original remains queued. Terminal validation failures need an explicit discard/dead-letter policy.
+- **The outcome is unknown** (the handler acted, then the server crashed, or the durable write timed out): re-adding and reprocessing may duplicate the effect. The guard is an **idempotency key inside the payload** (or a durable done-marker keyed by it), not careful timing: the processor must be able to detect "this request id already completed" and return success without repeating the effect. Redelivery after a crash then collapses to a no-op instead of a double grant.
+
+Queue retries after a successful `RemoveAsync` are a contradiction: removal is the success signal, and a failed `RemoveAsync` means the batch will be redelivered — so removal failures are retried (they leave the work queued), while *post-success* retries must never exist for the effect itself.
+
+### Sorted-map mechanics
 
 Use a sorted map for short-lived records keyed by a stable identifier, such as server heartbeats or matchmaking candidates. Set an expiration on every entry and clean stale values when reading. Do not confuse a sorted map with `OrderedDataStore`: MemoryStore entries expire and are intended for coordination, not historical persistence.
 
-The recent `PartyService Plus` DevForum resource is a useful concept specimen for queue cleanup, party leadership transfer, and cross-server matchmaking. It is a commercial community resource, not a canonical API reference. The official MemoryStore API remains the source of truth.
+```luau
+local MemoryStoreService = game:GetService("MemoryStoreService")
+local map = MemoryStoreService:GetSortedMap("ActiveServers")
+
+-- Writes carry the sort key: SetAsync(key, value, expiration, sortKey).
+local ok = pcall(function()
+	map:SetAsync(serverId, { players = #game.Players:GetPlayers() }, 45, 0)
+end)
+
+-- Paging uses exclusive bounds built from the LAST returned item's key and
+-- sortKey, not a page index. Advance the bound after each page;
+-- repeating the previous bound fetches the same range again.
+-- This is a moving live view, not a consistent multi-page snapshot.
+local exclusiveLowerBound = nil -- nil = start from the very first item
+while true do
+	local okRead, items = pcall(function()
+		return map:GetRangeAsync(Enum.SortDirection.Ascending, 100, exclusiveLowerBound)
+	end)
+	if not okRead or #items == 0 then break end
+	for _, item in items do
+		-- item.key, item.value, item.sortKey
+	end
+	if #items < 100 then break end -- short page = end of map
+	exclusiveLowerBound = { key = items[#items].key, sortKey = items[#items].sortKey }
+end
+```
+
+Cursor facts that break naive implementations:
+
+- For the cursor pattern above, use `{ key = ..., sortKey = ... }` from the last item. The API also accepts a bound with just one field. Ascending pages advance the exclusive lower bound; descending pages advance the exclusive upper bound. A cursor identifies the composite ordering position, not two independent exclusion tests.
+- A short page (`#items < count`) is the end-of-map signal. Do not loop until the bound errors.
+- Sort keys are numbers or strings, not booleans. Numeric sort keys precede strings, which precede missing sort keys; ties use the item's string key. Keep the sort-key type consistent per map.
+- **Heartbeat pattern**: heartbeat = short expiry (tens of seconds) + the owning server re-`SetAsync`ing its entry on a fixed interval. Cleanup-on-close is an optimization, not the correctness guarantee — crash expiry is what removes a dead server's entry.
+
+### Choosing a cross-server store (decision table)
+
+| Need | Use | Why not the alternatives |
+|---|---|---|
+| Persistent player/profile records | `DataStore` | MemoryStore expires; MessagingService is not state |
+| Rank queries over persistent data | `OrderedDataStore` | values must be integers; no versioning |
+| Live ordered views, leases, presence, tickets (TTL) | MemoryStore **sorted map** | DataStore has no TTL-sorted listing |
+| Point lookups on live data; paged enumeration with `ListItemsAsync` | MemoryStore **hash map** | sorted map adds sort cost you don't need |
+| Signals/commands between live servers | `MessagingService` | all stores are state, not delivery |
+| Hot-key contention | shard by key prefix + virtual shards | single-key writes serialize |
+
+Choose sharding from measured contention, request budgets, and documented store limits; do not infer hidden partition boundaries from an item count.
+
+### MessagingService request/response (ack pattern)
+
+Broadcast and migration notifications above are fire-and-forget. When a server must know whether another server *acted* on a command, add correlation and treat "no ack" correctly. The following sender/receiver fragments are illustrative, not one runnable script: install subscriptions before publishing, validate payloads and routing, protect API calls with `pcall`, and own subscription/task cleanup.
+
+```luau
+local pending = {} -- reqId -> { sentAt = os.clock() }
+
+-- Sender
+local reqId = HttpService:GenerateGUID(false)
+pending[reqId] = { sentAt = os.clock() }
+MessagingService:PublishAsync("PartyInvite", { reqId = reqId, toUserId = toUserId, kind = "invite" })
+
+-- Receiver (other server): validate, act, ack the same correlation id
+MessagingService:SubscribeAsync("PartyInvite", function(message)
+	local data = message.Data
+	if data.kind == "inviteAck" then
+		local p = pending[data.reqId]
+		if p then pending[data.reqId] = nil end
+		return
+	end
+	-- ... validate and act on the invite, then:
+	MessagingService:PublishAsync("PartyInvite", { reqId = data.reqId, kind = "inviteAck", accepted = accepted })
+end)
+
+-- Sender timeout sweep: unknown outcome, not "receiver did nothing"
+task.spawn(function()
+	while true do
+		for reqId, p in pending do
+			if os.clock() - p.sentAt > ACK_TIMEOUT then
+				pending[reqId] = nil
+				-- Absence of an ack does NOT mean the command was not executed:
+				-- the receiver may have acted and died before acking. The effect
+				-- itself must therefore be idempotent by reqId, so the recovery
+				-- path can replay the same operation safely instead of guessing
+				-- which side of the act/ack gap the failure landed on.
+			end
+		end
+		task.wait(1)
+	end
+end)
+```
+
+Design consequence: because the ack channel is best effort, the *operation* must be idempotent by correlation id. A timeout-retry must be able to replay the same operation without double-granting; for value-granting operations, keep the durable receipt pattern of `roblox-monetization` (grant and record the id in one durable operation, ack only after persistence).
 
 ## Persistent World State
 

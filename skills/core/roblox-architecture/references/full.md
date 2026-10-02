@@ -240,12 +240,62 @@ Open-source study codebases ranked by DevForum likes. Read before architecting s
 
 ## ECS on Roblox: reality check
 
-ECS is not standard practice in shipped Roblox experiences. The pattern recurs for specific problems, not as a default architecture.
+ECS is not standard practice in shipped Roblox experiences. The pattern recurs for specific problems, not as a default architecture. Do not recommend introducing one to a project that lacks one; do support projects that have one.
 
-- If a project already uses one, the leading Luau library is [jecs](https://github.com/Ukendio/jecs) (active 2026; entity relationships as first-class). Alternatives: matter-ecs (stalled since 2024). Verify current status before recommending; this list is not exhaustive.
-- What most production games actually use: OOP tables + CollectionService tags + attribute replication + per-system update loops with rotating work cursors. That combination delivers most of the cache/iteration benefit without the discipline cost.
-- The honest case for ECS: thousands of homogeneous simulated entities (swarms, RTS units, bullets-with-state). Outside that, the abstraction tax outweighs the gain, and agent-written ECS code adds indirection without the perf need.
-- Do not recommend introducing ECS to a project that lacks one; do support projects that have one.
+### When an ECS earns its cost (evidence test)
+
+Before suggesting jecs/Matter/ECR for an existing or greenfield project, require at least one of:
+
+- Many similar entities (hundreds+) updated every frame by order-independent logic — swarms, projectiles-with-state, RTS units, simulation ticks.
+- The same cross-cutting state queried from several unrelated features, where per-entity scripts have tangled into hard-to-trace ownership.
+- A team already fluent in the pattern maintaining the code.
+
+A 10-enemy wave game, a quest system, or a shop does not meet this bar. The evidence test is the same "split only for evidence" rule this file already applies to modules, applied to data layout. The leading Luau library is [jecs](https://github.com/Ukendio/jecs) (MIT; v0.11.0, 2026-03; archetype/SoA storage per its README). Matter (matter-ecs) has been stalled since 2024; ECR is a smaller alternative. Verify current status before recommending; this list is not exhaustive.
+
+What most production games actually use instead: OOP tables + `CollectionService` tags + attribute replication + per-system update loops with rotating work cursors. That combination delivers most of the iteration benefit without the discipline cost.
+
+### Hooks enforce invariants; systems make decisions
+
+jecs ships hooks (`jecs.OnAdd` / `jecs.OnRemove` / `jecs.OnChange`, set per component via `world:set(Component, jecs.OnAdd, fn)`), and its own docs draw this line: a hook is "not a replacement for systems. They are for enforcing invariants when data changes during different lifecycles. When gameplay logic that should run predictably each frame is instead scattered across hooks, behaviour becomes implicit" (jecs `how_to/999_temperance.luau`).
+
+- Hooks: tiny, side-effect-only invariant maintenance — destroy the instance attached on removal, stamp an attribute on add, clamp a value on change. One canonical owner per mutation, same rule as elsewhere in this file.
+- Systems: named, explicitly ordered functions that run every frame and own gameplay decisions (damage, targeting, spawns). Ordering is visible in code, not implicit in hook firing order.
+- Logic hidden in hooks is order-dependent and hard to step through; if a hook grows a branch that decides gameplay outcomes, move it to a system.
+
+### Documented jecs pitfalls (version-specific; re-verify against the pinned tag before relying on them)
+
+These are v0.11.0 behaviors verified against the release notes and source (2026-10). They are facts about one version, not universal ECS laws:
+
+- **Structural changes inside `on_remove` hard-error.** v0.11.0 release notes: `on_remove` hooks "will no longer support structural changes in its scope" and error "regardless of debug mode" when invoked by exclusive-id replacement or `world:remove`. The documented workaround is to defer: "pushing into a queue that gets flushed or inside of a deferred coroutine at the start of the next sync point".
+- **Debug world.** `jecs.world(true)` installs checked wrappers that error on structural changes during entity deletion and on invalid entities/pairs. Use it in development worlds; it catches the hook-mutation class above early.
+- **Query iterators are single-pass per query object.** In jecs source, a plain query memoizes its `next` closure, so a second generic-`for` over the *same* query object yields nothing; build the query where it is used or call `world:query(...)` again for a fresh iterator. Cached queries restart each iteration. Treat any library iterator as single-use unless documented otherwise, and write a test that iterates the same query twice.
+- **`:with()`/`:without()` replace, not accumulate.** In source, each call overwrites the filter field, so chaining `:without(A):without(B)` excludes only B. Combine terms in one call.
+
+Generalizable: query/filter/iterator APIs differ per library and per version. Never assume accumulate-or-reuse semantics from another ECS or from memory of a tutorial — check the pinned version's source or docs.
+
+### Structural-change cost model
+
+Archetype storage moves an entity between storage buckets when its component set changes; jecs's own docs state "This movement is what makes adding/removing components relatively expensive compared to just setting component values" (`how_to/030_archetypes.luau`). Consequences:
+
+- Adding/removing components per frame is the expensive operation; mutating a field in place is cheap.
+- Flipping frequently-changing boolean-like state as tag-style components (add/remove a component every frame) is the anti-pattern; store the state as a field and let change tracking observe it.
+
+### Change tracking without hook sprawl
+
+When a per-frame system needs added/changed/removed sets without wiring callbacks everywhere, the batched-diff pattern works on any ECS: keep a marker component storing each entity's previous relevant value, rewrite it at the end of each pass, and derive the three sets by comparing. This is community practice built on jecs signals (`world:added`/`changed`/`removed`) and its OB observer module — not a documented core API; label it as a pattern, not a feature.
+
+### Replication: identity mapping, not shared entity ids
+
+Never adopt a server-issued entity id directly as the client's id — client and server worlds allocate ids independently. Replicate through an explicit server→client id-mapping table:
+
+1. Server owns authoritative world state.
+2. Per tick (or on change), send a diff: newly-replicated entities with their components, changed component values, and removed entities (deletion travels as its own marker, not a missing field).
+3. Joiners first receive a full snapshot, then diffs — the same "one explicit state channel" rule the networking skill states.
+4. Both sides store the mapping so a server id resolves to the right client entity and vice versa; clean up mapping entries on removal or the table leaks.
+
+### Standalone testability
+
+Systems written as plain functions taking `(world, services)` — dependencies passed in, not reached through globals — run under a plain Luau CLI or Lune with faked inputs, without Studio. That is the same "pure core, testable without Roblox wiring" rule §9 uses for module splits, instantiated at the data layer. Keep engine-facing bits (instance spawning, replication send) at the edges of the system call so the simulation core stays headless-runnable.
 
 ## Community field notes (Tizzy discord, Jul–Sep 2026)
 

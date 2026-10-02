@@ -14,6 +14,9 @@ sources:
   - https://raw.githubusercontent.com/rojo-rbx/rojo/v7.7.1/src/cli/syncback.rs
   - https://raw.githubusercontent.com/pesde-pkg/pesde/main/docs/src/content/docs/reference/manifest.mdx
   - https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/README.md
+  - https://raw.githubusercontent.com/lest-luau/lest/main/docs/backends.md
+  - https://raw.githubusercontent.com/lest-luau/lest/main/docs/continuous-integration.md
+  - https://raw.githubusercontent.com/UpliftGames/wally/main/src/resolution.rs
   - https://create.roblox.com/docs/llms.txt
   - https://create.roblox.com/docs/reference/engine/llms.txt
   - https://create.roblox.com/docs/cloud/llms.txt
@@ -27,7 +30,7 @@ sources:
 
 ## When to Load
 
-Load when setting up a filesystem workflow, pinning tools, adding packages, configuring lint or format checks, generating a sourcemap, or building CI for a Roblox project.
+Load for filesystem workflows, tool/package pins, linting, sourcemaps, and CI.
 
 ## Quick Reference
 
@@ -37,7 +40,8 @@ Load when setting up a filesystem workflow, pinning tools, adding packages, conf
 - Run Selene and StyLua in check mode in CI. Do not let a formatter rewrite a contributor's branch silently.
 - Use Lune for standalone Luau scripts or test helpers when its standard libraries fit the task.
 - Generate a Rojo sourcemap for editor tooling when the project needs Roblox-aware navigation.
+- CI must check test results and expected counts, not merely exit codes. Separate logic, file/HTTP, and engine suites; see full.md.
 
-**Source-of-truth first.** Know whether the place lives in Studio, in files (Rojo), or in a bidirectional sync before editing; never assume both sides match. `rojo syncback` pulls saved-place edits into files (dry-run/list first); it is a file pull, not live two-way sync. Name optional tools (Selene, StyLua, luau-lsp, Lune, Wally, pesde) when relevant; TestEZ is archived and belongs only in projects already using it. Do not impose a tool on a project that does not use it. Details in `references/full.md` §§1b–1c.
+**Source-of-truth first.** Identify Studio vs files before editing; never assume they match. `rojo syncback` pulls saved-place edits, not live two-way sync; preview with dry-run/list. Follow existing tooling; do not impose optional tools. TestEZ is archived: keep where used, not as a new default. See full.md §§1b–1c.
 
 **Need the details?** Load `references/full.md` for setup, file layout, and CI examples.

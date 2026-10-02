@@ -6,9 +6,14 @@ All notable changes to `roblox-brain` are documented here.
 
 ### Added
 
-- Tooling guidance for Rojo syncback previews, Lest testing backends, and using Wally dependencies through pesde.
-- Modern raycast filtering guidance with `IncludeInstances` and `ExcludeInstances`.
-- API drift checks for `vector.lerp` and the digital gamepad input used in the movement example.
+- Expanded Luau guidance on metatable behavior, coroutine lifecycles, failure handling, buffer layouts, and type refinements, with worked examples.
+- Added profiling and Parallel Luau guidance on allocation costs, Actor messaging, SharedTable updates, and snapshot ownership.
+- Expanded networking guidance with latency-aware hit validation, shared clocks, bandwidth budgeting, and typed schema workflows.
+- Added reactive UI lifecycle and cleanup guidance, plus ECS adoption, system ordering, query pitfalls, and replication identity mapping.
+- Added teleport handoff and recovery workflows, scheduled restart handling, durable acknowledgements, and cross-server retry and paging patterns.
+- Added audience-specific text filtering and AnimationTrack blending, playback, and cleanup guidance.
+- Expanded testing and package workflows, including runtime limits, CI result checks, version ranges, realm conflicts, and publish previews.
+- Added Rojo syncback, pesde/Wally interoperability, and modern raycast filtering guidance.
 
 ### Changed
 

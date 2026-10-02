@@ -161,6 +161,34 @@ local function getPlayerData(player: Player): PlayerData
 end
 ```
 
+### Refinements are claims about a place, and the fragile one is a table field
+
+A refinement attaches to a specific storage location — a local binding or a table field expression — and survives only as long as no intervening code invalidates it. Reassigning a narrowed local kills its refinement immediately (verified: the use after `v = nil` is a type error under the current checker). What varies between solver versions is how aggressively field refinements (`t.value ~= nil`) are invalidated by writes through other paths; treating "any intervening call may have written the field" as true is the safe assumption even when the checker in front of you still accepts the code.
+
+The robust idiom, for both reasons: copy the field to a local and narrow the local.
+
+```luau
+-- Fragile: refinement on t.value, and other code may write t.value
+if t.value ~= nil then
+    process(t.value)
+end
+
+-- Robust: the local cannot be written behind the checker's back,
+-- and reassignment of the local is visible to the checker
+local value = t.value
+if value ~= nil then
+    process(value)
+end
+```
+
+Copy before logic that may call anything; a local copy is insulated from later replacement of the original field. A captured mutable local can still be rebound by a closure, and copying a table reference does not freeze its contents.
+
+### Reading type errors: the report line is where types meet, not where the bug is
+
+A type error is reported at the point where an incompatible value is *used or assigned*, but the wrong value was usually produced one or two hops upstream. Probed: a function whose body returns a string under a `number` return annotation is flagged at the `return` — the source — not at the downstream use. Follow the value back to where it was created instead of annotating the report line into silence.
+
+Related, and equally verified: `any` at a boundary silences every check downstream. A function returning `any` can return a string, and every consumer — including `local n: number = get()` — type-checks cleanly while the bad value flows on. When you see a suspicious value that the checker "let through," look for an `any` between its origin and the failure point; fixing the annotation at that hop restores checking for everything after it.
+
 ## Generics
 
 ```luau
@@ -392,6 +420,7 @@ Roblox-only compiler feature: server-side scripts compile to machine code instea
 - Expecting `:` method definitions to automatically share precise `self` type across the class
 - Using `::` to force unrelated conversions instead of fixing underlying type design
 - Building unions without a discriminant, making downstream refinement difficult
+- Narrowing a table field and holding the refinement across calls that may write the field; copy the field to a local and narrow the local instead
 - Using intersections between incompatible primitives (`string & number`)
 - Annotating every local variable (noise that hides the important annotations)
 - Exporting internal helper types that clutter the module's public surface

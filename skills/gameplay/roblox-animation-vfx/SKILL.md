@@ -1,8 +1,9 @@
 ---
 name: roblox-animation-vfx
 description: "Use when implementing Roblox character animations, particles, beams, trails, tweens, camera shake, or other visual effects."
-last_reviewed: 2026-08-31
+last_reviewed: 2026-10-02
 sources:
+  - https://create.roblox.com/docs/reference/engine/classes/AnimationTrack
   - https://create.roblox.com/docs/animation/using
   - https://create.roblox.com/docs/reference/engine/classes/Animator
   - https://create.roblox.com/docs/reference/engine/classes/ParticleEmitter
@@ -25,6 +26,7 @@ Load when implementing character animation, particle or beam effects, tweens, ca
 
 - Load tracks through an `Animator` on a `Humanoid` or `AnimationController`; set `AnimationTrack.Priority` deliberately.
 - Use `GetMarkerReachedSignal()` for named gameplay or presentation cues, then disconnect or replace the listener when the track ends.
+- Track lifecycle: `Ended` is post-fade cleanup; `Stopped` includes explicit stops. Same-priority tracks blend by weight; see full.md for control and loading guards.
 - A burst `ParticleEmitter` usually has `Rate = 0` and uses `:Emit(count)` with a bounded lifetime; use pooling for frequent effects.
 - Shape each effect as readable phases: warning, contact, brief peak, and fade. Give impact a clear silhouette before adding secondary particles, light, sound, or camera feedback.
 - Use native particle flipbooks for animated textures; choose OneShot for a single impact or vary start frames for organic repetition. Custom mesh/image flipbooks may need their own playback code.

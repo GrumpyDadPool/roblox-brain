@@ -1,8 +1,9 @@
 ---
 name: roblox-data
 description: "Use when implementing player data persistence with DataStore, session ownership, schemas, migrations, or save and load flows."
-last_reviewed: 2026-09-19
+last_reviewed: 2026-10-02
 sources:
+  - https://create.roblox.com/docs/reference/engine/classes/DataModel
   - https://create.roblox.com/docs/cloud-services/data-stores
   - https://create.roblox.com/docs/cloud-services/data-stores-vs-memory-stores
   - https://create.roblox.com/docs/cloud-services/memory-stores
@@ -21,7 +22,7 @@ sources:
 
 ## When to Load
 
-Load when designing player saves, schema migrations, retries, shutdown handling, or session ownership. Use `roblox-server-data` for ordered leaderboards, messaging, and world data; `roblox-cloud` for Open Cloud.
+Load for player saves, migrations, retries, shutdowns, or session ownership. Leaderboards/messaging/world data: `roblox-server-data`; Open Cloud: `roblox-cloud`.
 
 ## Quick Reference
 
@@ -36,4 +37,4 @@ Load when designing player saves, schema migrations, retries, shutdown handling,
 - Poll `DataStoreService:GetRequestBudgetForRequestType` for live headroom; quotas scale with concurrent users (experience reads: 300 + concurrentUsers x 40/min).
 - New code identifies users with `player.User` (`User.Id`, `DomainType`, `DomainId`); `UserId` remains valid, but never mix the two IDs in one key scheme.
 
-**Need details?** `references/full.md` has the framework-neutral persistence design.
+> Persistence workflows: [references/full.md](references/full.md)

@@ -1,6 +1,7 @@
 ---
 name: roblox-growth-design
-description: "Use for growth diagnosis, discovery, retention, onboarding, experiments, LiveOps, and packaging."
+description: "Use for Roblox growth: diagnosing stats, discovery, retention, onboarding, experiments, LiveOps, thumbnails, and packaging."
+when_to_use: "Also when CCU, D1/D7, playtime or Home recommendations are low, planning an update or A/B test, reading the Creator Dashboard, and auditing why a game isn't growing."
 last_reviewed: 2026-09-22
 sources:
   - https://create.roblox.com/docs/discovery

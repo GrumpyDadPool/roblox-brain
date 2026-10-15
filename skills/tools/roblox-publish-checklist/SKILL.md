@@ -1,6 +1,7 @@
 ---
 name: roblox-publish-checklist
-description: "Use before publishing or updating a Roblox experience to run evidence-backed release gates for the surfaces that changed."
+description: "Use before publishing or updating a Roblox experience to run evidence-backed release gates and a pre-release audit."
+when_to_use: "Also when asked to ship, release, push an update, restart servers, or check whether a build is ready, safe or tested enough."
 last_reviewed: 2026-07-26
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/publishing/publish-games-and-places.md

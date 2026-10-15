@@ -1,6 +1,7 @@
 ---
 name: roblox-collaboration-mode
-description: "Load BEFORE any Roblox task, including direct build requests: sets initiative level, when to warn vs act, and which decisions need the user."
+description: "Load FIRST for any Roblox task: build, change, fix, debug, review, audit, or plan. Sets initiative and which decisions need the user."
+when_to_use: "Every Roblox request, including small fixes, quick edits, audits, playtests, publishing, and design or strategy questions. Load it before the domain skill."
 last_reviewed: 2026-08-21
 sources:
   - original

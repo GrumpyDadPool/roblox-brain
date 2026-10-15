@@ -1,6 +1,7 @@
 ---
 name: roblox-luau-core
-description: "Use for Luau language semantics, tables, control flow, string patterns, scope, closures, and cross-language translation errors."
+description: "Use when writing, editing, or debugging any Luau: tables, control flow, string patterns, scope, closures, and errors ported from JS/Python."
+when_to_use: "Also for Luau syntax errors, nil indexing, wrong loop or table behavior, string formatting, and reviewing Luau code for correctness."
 last_reviewed: 2026-10-02
 sources:
   - https://luau.org/syntax

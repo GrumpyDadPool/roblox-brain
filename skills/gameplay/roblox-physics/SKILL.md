@@ -1,6 +1,7 @@
 ---
 name: roblox-physics
-description: "Use when building Roblox vehicles, ragdolls, projectiles, elevators, constraints, forces, or other physics-driven gameplay."
+description: "Use when building or fixing Roblox physics: vehicles, ragdolls, projectiles, elevators, constraints, forces, network ownership."
+when_to_use: "Also when parts fling, jitter, fall through floors or desync, and when tuning projectile or knockback feel."
 last_reviewed: 2026-10-02
 sources:
   - https://devforum.roblox.com/t/cframe-operations-for-the-rest-of-us/3546477

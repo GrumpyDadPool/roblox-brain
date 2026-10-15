@@ -1,6 +1,7 @@
 ---
 name: roblox-npc-ai
-description: "Use when creating Roblox NPCs or enemies with pathfinding, state machines, line-of-sight or FOV detection, spawns, or AI update loops."
+description: "Use when creating or fixing Roblox NPCs, bots or enemies: pathfinding, state machines, line of sight, spawns, AI update loops."
+when_to_use: "Also when NPCs get stuck, walk through walls, chase wrongly, lag the server, or bots need to fill empty servers."
 last_reviewed: 2026-08-31
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/characters/pathfinding.md

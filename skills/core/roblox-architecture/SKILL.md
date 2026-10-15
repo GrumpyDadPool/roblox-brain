@@ -1,6 +1,7 @@
 ---
 name: roblox-architecture
-description: "Use when assigning Roblox feature ownership, code location, dependencies, startup, or client-server boundaries without imposing a framework."
+description: "Use when adding, moving, refactoring, or reviewing Roblox feature ownership, code layout, dependencies, startup, or client-server boundaries."
+when_to_use: "Also when deciding where code goes, splitting a large script, fixing load-order or require cycles, untangling services/controllers, or auditing project structure."
 last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/projects/data-model

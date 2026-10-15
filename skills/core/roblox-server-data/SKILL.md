@@ -1,6 +1,7 @@
 ---
 name: roblox-server-data
-description: "Use for Roblox server or cross-server data: OrderedDataStore leaderboards, MessagingService, world state, seasons, or guilds."
+description: "Use when building or fixing Roblox cross-server data: OrderedDataStore leaderboards, MessagingService, MemoryStore, world state, seasons."
+when_to_use: "Also for global leaderboards, cross-server announcements or events, matchmaking queues, shared counters, and reviewing non-player persistence."
 last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/MemoryStoreSortedMap

@@ -1,6 +1,7 @@
 ---
 name: roblox-building
-description: "Use when building geometry, maps, props, or generated assets with MCP or standalone Luau."
+description: "Use when building or editing Roblox geometry, maps, props, or generated assets with MCP or standalone Luau."
+when_to_use: "Also for fixing map gaps, z-fighting, scale, collisions or players escaping the map, placing store assets, and reviewing a map layout."
 last_reviewed: 2026-08-31
 sources:
   - original

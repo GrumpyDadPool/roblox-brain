@@ -1,6 +1,7 @@
 ---
 name: roblox-performance
-description: "Use when profiling Roblox performance or diagnosing FPS, memory, network, mobile, or hot-path problems."
+description: "Use when profiling or fixing Roblox performance: low FPS, lag, memory growth, network load, slow mobile devices, or hot paths."
+when_to_use: "Also when the game stutters, phones overheat or crash, server heartbeat drops, before adding many parts/effects/UI, and when auditing performance before release."
 last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/en-us/performance-optimization/microprofiler

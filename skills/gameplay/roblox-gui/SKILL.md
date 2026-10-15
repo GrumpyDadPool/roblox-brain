@@ -1,7 +1,7 @@
 ---
 name: roblox-gui
 description: "Use when building or fixing Roblox menus, HUDs, shops, dialogs, or UI that must work on phones, tablets, desktop and console."
-when_to_use: "Also when UI overlaps, is cut off or too small on mobile, a phone, tablet, TV or controller."
+when_to_use: "Also when changing or reviewing any UI, or when UI overlaps, is cut off, too small, misplaced or unreadable on mobile, a phone, tablet, TV or with a controller."
 last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/ui

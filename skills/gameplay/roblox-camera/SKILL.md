@@ -1,6 +1,7 @@
 ---
 name: roblox-camera
-description: "Use when scripting Roblox camera behavior, CFrame placement, screen raycasts, first or third-person views, or cutscenes."
+description: "Use when scripting or fixing Roblox camera behavior: CFrame placement, screen raycasts, first/third-person, shoulder views, cutscenes."
+when_to_use: "Also when the camera clips through walls, jitters, aims wrong on touch or gamepad, or needs a death cam or spectate view."
 last_reviewed: 2026-06-29
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/Camera

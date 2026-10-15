@@ -1,6 +1,7 @@
 ---
 name: roblox-networking
-description: "Use when validating RemoteEvent or RemoteFunction arguments, adding rate limits, designing server-authoritative systems, or preventing exploits."
+description: "Use when adding, changing, or auditing RemoteEvents/RemoteFunctions: argument validation, rate limits, server authority, exploit prevention."
+when_to_use: "Also for anything sent between client and server, laggy or dropped events, desync, payload size, cooldowns, and security reviews of remotes."
 last_reviewed: 2026-10-02
 sources:
   - https://create.roblox.com/docs/scripting/events/remote

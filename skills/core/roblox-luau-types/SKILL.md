@@ -1,6 +1,7 @@
 ---
 name: roblox-luau-types
-description: "Use for Luau annotations, generics, unions, narrowing, strictness, sealed tables, module type exports, typed metatables, or new-solver features."
+description: "Use when adding or fixing Luau type annotations: generics, unions, narrowing, strict mode, sealed tables, module type exports, typed metatables."
+when_to_use: "Also for type checker errors and warnings, --!strict migration, luau-lsp diagnostics, and reviewing typed APIs."
 last_reviewed: 2026-10-02
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/luau/type-checking.md

@@ -18,7 +18,6 @@ All notable changes to `roblox-brain` are documented here.
 - `roblox-gui`: gamepad focus ownership: entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close, and stray selections that block gameplay.
 - `roblox-input`: hybrid-device presentation from `PreferredInput`, touch action buttons (touch ownership, placement from the jump button), a single gameplay input gate, cancelling held actions without firing, gamepad tool activation and center aim, platform button hints, and a cross-device input test checklist.
 - Drift-registry entries for the new API claims.
-
 - Verification and agent-workflow lessons distilled from a full development cycle of a shipped round-based game (build, launch, live ops), each traced to a recorded correction or bug and checked against official docs:
   - `roblox-collaboration-mode`: checkable collaboration rules (skill checks before "done", evidence-linked advice changes, persistent observation logs, preserving approved baselines, verifying delegated work).
   - `roblox-studio-mcp`: multiplayer client identity, input-coordinate calibration, separating handler/synthetic/hardware evidence, test-override hygiene, positive visibility controls, camera cleanup.

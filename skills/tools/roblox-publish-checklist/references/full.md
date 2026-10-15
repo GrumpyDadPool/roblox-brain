@@ -160,3 +160,13 @@ Use this structure:
 Group evidence by class in the report: edits that succeeded (readback-confirmed), runtime behavior actually observed, and checks that could not run (reported as Unverified). A successful edit is not runtime proof. The checklist documents rollback; it does not supply transactional rollback. Recovery relies on the compensating action recorded per mutation (`roblox-studio-mcp`).
 
 `READY WITH ACCEPTED RISK` requires a named risk, impact, owner, and rollback or mitigation. It is not a softer spelling of NOT READY.
+
+## Close the release against the serving build
+
+Track the source revision, installed Studio payload, published place version, and versions actually serving sessions separately. After an authorized publication, join through the intended player entry path and record the experience, place, runtime `PlaceVersion`, build marker, access state, and smoke-test result. Existing servers keep their loaded place version when a newer version is published. Report old and new live versions separately before attributing telemetry to a fix.
+
+Inventory models, UI templates, and other place-owned dependencies referenced by the changed code. Exercise their spawn/open path in the release place and inspect the result: a silent fallback can leave the console clean while an asset is missing. Match this inventory to the saved/published candidate, not only the working Studio tree.
+
+### Player-state transition matrix
+
+For round or shared-state changes, cross the relevant events with active survivors, eliminated players already respawned, spectators, mid-round joiners, revived players, and leavers. Include join/data-ready during setup, role reveal, teleport, active play, results, cleanup, and the next round where applicable. Observe each affected client's controls, camera, UI, tools, and participation state. Include human and bot paths when both exist. A solo round that ends immediately on death cannot verify an eliminated player's behavior during a continuing multiplayer round.

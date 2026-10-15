@@ -15,6 +15,18 @@ For a behavior, answer:
 
 If those answers fit in one small module or script, keep them there. A service/controller pair is not automatically more architectural than two scripts. Add boundaries because ownership differs, not because a template has folders to fill.
 
+### Reuse-first integration workflow
+
+Operator/design guidance: a small set of proven modules can be a better foundation for AI-assisted games than repeated regeneration. This is not a mandate to create a framework or trust a module merely because it is familiar.
+
+1. Inventory the project’s existing pathfinding, entitlement, persistence, networking, and cleanup owners before writing replacements. Read their implementations, pinned dependency docs, tests, and representative callers. Do not assume a method name proves its behavior.
+2. Record only the contract needed for this task: caller side, inputs/results, owned state, possible yields, initialization order, failure/retry behavior, and teardown. Identify who already saves profiles and processes receipts.
+3. Connect the feature through those public operations. Keep product/pass IDs and game-specific behavior in configuration or a narrow dispatch table, not duplicated purchase callbacks or parallel save loops. Let each module keep its existing failure and security checks.
+4. Add a small adapter only for a real contract mismatch. Fix an unsafe existing module at its owner rather than wrapping it with a second competing implementation. Avoid a generic utility module that accumulates unrelated features.
+5. Exercise the connection, not just the isolated modules: successful feature flow, unavailable dependency, duplicate request, player departure, and teardown/recreation. Check connections, tasks, instances, and player-keyed caches return to baseline; static cleanup keywords alone are not a leak test. Domain failure tests live in `roblox-data`, `roblox-monetization`, and `roblox-npc-ai`.
+
+If no suitable owner exists, search native APIs and maintained libraries first, then add the smallest missing behavior. Explain the verified reuse path to the implementing agent so it composes the established kit instead of silently bypassing it.
+
 ## 2. Runtime location is a trust and execution decision
 
 | Location | Typical role | Important consequence |
@@ -297,10 +309,17 @@ Never adopt a server-issued entity id directly as the client's id — client and
 
 Systems written as plain functions taking `(world, services)` — dependencies passed in, not reached through globals — run under a plain Luau CLI or Lune with faked inputs, without Studio. That is the same "pure core, testable without Roblox wiring" rule §9 uses for module splits, instantiated at the data layer. Keep engine-facing bits (instance spawning, replication send) at the edges of the system call so the simulation core stays headless-runnable.
 
-## Community field notes (Tizzy discord, Jul–Sep 2026)
+## Field-reported patterns
 
-Practitioner reports from a live dev Discord; repeated field observations, not doc-verified claims. <!-- temporal: 2026-09 -->
+Repeated observations from working Roblox developers: useful starting points, not doc-verified claims. <!-- temporal: 2026-09 -->
 
-- **Module-loader race pattern:** race conditions from dependency chains ("require this → require that" dominoes) cause playtests that only work after 2–3 restarts. Fix pattern: server services and client controllers don't depend on each other until their `.Init()` is called; a module loader requires all modules, then initializes all (optionally `task.spawn` per init for parallel init). Also makes the codebase far easier for AI agents to work with. Attribution: BuilderbeastYT/Ibra 2026-07-29; RBobloxian5542 2026-08-07
-- **BigNum handling for simulators:** `IntValue` breaks past ~10 quadrillion; `NumberValue` extends only to ~9.22e18; the standard fix is coefficient + exponent pairs (a BigNum-style library, e.g. the "infinitemath" module). Attribution: GameForgeX; renik01; adhx5; Skardoll; Davide, 2026-07-06
-- Max server size is 200 players; a "10k player server" is 10k spread across 200-slot servers. Attribution: thug, 2026-08-22
+- **Module-loader race pattern:** race conditions from dependency chains ("require this → require that" dominoes) cause playtests that only work after 2–3 restarts. Fix pattern: server services and client controllers don't depend on each other until their `.Init()` is called; a module loader requires all modules, then initializes all (optionally `task.spawn` per init for parallel init). Also makes the codebase far easier for AI agents to work with.
+- **BigNum handling for simulators:** `IntValue` holds a signed 64-bit integer, so it overflows past 2^63-1 (about 9.22e18). `NumberValue` holds an IEEE 754 double: magnitude reaches about 1.79e308, but only integers up to 2^53 (about 9.0e15) are exact. Luau numbers are doubles, so arithmetic above 2^53 loses precision whichever container holds the value. Beyond those bounds, coefficient + exponent pairs (a BigNum-style library, e.g. the "infinitemath" module) are the practical fix. Engine definitions: [NumberValue](https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/NumberValue.yaml), [IntValue](https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/IntValue.yaml).
+- Max server size is 200 players; a "10k player server" is 10k spread across 200-slot servers.
+
+## Presentation and round-lifecycle contracts
+
+- Keep authoritative attack rules, eligibility, hit resolution, and cooldowns independent of swappable presentation. Select animations, audio, particles, colors, and poses through cosmetic configuration. Swap a cosmetic in tests and verify the gameplay contract stays the same.
+- Define an enrollment cutoff and fallback for players whose profile becomes ready during setup. Test arrival during role allocation, reveal, teleport, active play, and cleanup; check participation, spawn, tools, and client UI together. Avoid an accidental gap between eligibility windows.
+- Define which practice and competitive rounds advance each progression system. Snapshot the current lesson ordinal at one lifecycle boundary before counters advance; use that snapshot consistently for role choice, coaching, and protection rules. Test consecutive practice rounds and the multiplayer transition with preview overrides disabled.
+- Put each recurring round lifecycle behind a recoverable failure boundary. Preserve the original error, perform idempotent cleanup, and establish valid lobby invariants before starting another round. Inject setup and active-play failures. If cleanup cannot restore the invariants, fail visibly rather than silently looping over broken state.

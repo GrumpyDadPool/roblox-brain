@@ -232,6 +232,14 @@ A brief tutorial or contextual tooltips can help. "No tutorial" is not a rule. T
 - "Show, don't tell" is a strong default for younger audiences: let players learn by doing (plant a seed and watch it grow) rather than reading a text block. Some control schemes still require text; keep it brief and contextual.
 - Give a concrete reason to return tomorrow: a crop that finishes growing, a daily reward that escalates, a friend's base to visit.
 
+### Retention changes without a release
+
+<!-- temporal: 2026-10 -->
+
+**Field observation:** D1 can rise as concurrent players increase and then fall after the peak with no game change. That points at social network effects: a busier game can offer more friends, opponents, and social reasons to return. This is a possible mechanism, not proof that scale alone raises retention or a documented ranking rule.
+
+Before crediting an update or declaring a regression, compare mature acquisition cohorts, device/locale mix, seasonality, friend co-play, server occupancy, and matchmaking wait times. A change from paid to Home traffic can alter aggregate D1 without improving any cohort. If social density looks relevant, test better grouping or a solo fallback; do not buy more traffic merely to inflate CCU. See §2 for documented Home signals.
+
 ### Low D7 or D30 retention
 
 Do not reduce this to adding daily rewards. Investigate:
@@ -384,6 +392,16 @@ A live-game operator's process for shipping quality fast, from a producer who ru
 - **Communicate visually and asynchronously.** Use recorded video (Loom-style), screenshots, and references to existing games rather than long text; most "wrong work" is a communication gap, not a skill gap. Prototype small ideas with AI first to avoid paid-dev round-trips.
 - **Hire T-shaped people.** One person who does programming + UI, or building + modeling + animation, beats a bigger brittle team. Same time zone matters for fast iteration.
 - **Reputation and vetting beat money.** In the Roblox talent pool (often young), trust decides everything: hire via Twitter/YouTube presence, prefer paid-upon-completion (never pay in full up front; that kills delivery), always sign a contract, make a new contract for new scope, and don't sneak unagreed work into scope mid-project (it breeds resentment and slows the team).
+
+### Hiring and commissioned asset rights
+
+<!-- temporal: 2026-10 -->
+
+**Field-reported hiring heuristic:** a studio operator reports preferring Roblox-native experience for hands-on engineering, product, and game design, while describing outside artists and senior engineering managers as viable hires. Judge the role, not the applicant's origin: ask hands-on candidates to explain Roblox player expectations and device constraints; test artists' delivery against your actual asset pipeline; evaluate managers on technical judgment and team leadership. Pair outside specialists with someone who understands the platform. This is one studio operator's preference, not an exclusion rule.
+
+**Payment and rights are separate.** Before commissioning code, clothing, models, audio, or UI, record deliverables, payment milestones, permitted uses, modification rights, third-party components, and whether rights are assigned or licensed. Retain signed agreements and asset provenance outside chat accounts. Do not assume an invoice or access to source files establishes copyright ownership.
+
+**U.S. legal boundary:** copyright ordinarily starts with the author (17 U.S.C. §201); ownership of a copy does not itself transfer copyright (§202). A voluntary transfer of copyright ownership generally requires a writing signed by the rights owner or authorized agent (§204). Work-made-for-hire status is an exception with specific employee/commissioned-work requirements; adding that phrase to any contractor agreement does not automatically qualify it. A suitable license may meet the project's needs without an ownership transfer. Get jurisdiction-specific legal review for the agreement and any disputed rights; an agent should not draft assurances that an asset is legally cleared. Sources: U.S. Copyright Office, Chapter 2 and Circular 30 below. A contractor anecdote motivates the check, not the legal rule.
 
 ### Core-loop design
 
@@ -840,7 +858,7 @@ Condensed here; full detail in §11.5 Traps. D1/D7 has ~3-day reporting delay, o
 ### 11.2 Ads-as-data-feed model and algorithm behavior
 
 - Core model: the ads system is a data-feed for the algorithm, not a growth channel; spend level mostly changes speed, not outcome. "It just feeds your organic algo with bad data" if the game is unfixed, but run ads for a week *while improving the data* to raise the chance of stable organic CCU after ads. A 10k-CCU-caliber game reaches the same algo injection from 75 credits as 750; only multiplayer-dependent games need the higher floor; "whether you spend 1,000 vs 50 ad credits it will only change how fast you stimulate it". Roblox now prioritizes organic growth so heavily that a game which can't hold CCU without ads won't be saved by ads. Pause ads entirely while shipping a core-loop rework so bad new-session data doesn't poison your stats.
-- Ad traffic pollutes stats: ad players have measurably worse retention than home-rec traffic (e.g. 1% D1 sponsored vs 4% home on the same game); ads pollute the stats the algorithm judges; some devs deliberately pause ads and let organic impressions recover the numbers.
+- **CONFLICT with official §2:** the following reports confuse aggregate metrics with Home-ranking inputs; externally acquired users' behavior does not enter that ranking stage. Treat alleged suppression as unverified, not a spending rule. Ad traffic pollutes stats: ad players have measurably worse retention than home-rec traffic (e.g. 1% D1 sponsored vs 4% home on the same game); ads pollute the stats the algorithm judges; some devs deliberately pause ads and let organic impressions recover the numbers.
 - Stop-ads rule (consensus, multiple wordings): run ads until home-recommendation impressions exceed ad impressions (practically until home recs alone sustain 10+ CCU), then stop or cut ~50–60%; organic algo players are "infinitely better" than ad players. Continuing ads after home recs dominate can even lower total impressions; several devs reported playtime jumping ~4 min (ads) → ~28 min (algo) on the same game; one kept ads until 100–150 CCU from home recs alone. Home-rec players match your target audience almost exactly, so post-algo stats are structurally higher; ad stats understate a good game.
 - Sponsored impressions are an algo-weighted auction, not a pure bid: higher spend buys more (and somewhat better-quality) impressions but you can't crowd out competitors; even giants like Rivals and Pet Sim 99 still take a large share of sponsored traffic; run a second ad wave only after home recs dry up.
 - Beta mode is a stat-laundering tool (consensus with counterpoint): release in beta → the game stays out of home recs → burn ad credits, fix funnels/D1/playtime/monetization while ratings can't tank you → flip public with clean data for a large influx; heavy beta spend is for A/B testing ~100 thumbnails and proving sticky metrics. "Bad data is worse than no data": a buggy public launch permanently teaches the algo your game is bad; it "ruins your game's future recommendation ranking." Counterpoints: it eats your 7-day algo window; one dev argues it's wasted money vs launching ready; beta mode may have hurt one game's home-recs traction for a month; another warns that beta mode will only reduce the player count. The community splits.
@@ -866,6 +884,14 @@ Condensed here; full detail in §11.5 Traps. D1/D7 has ~3-day reporting delay, o
 #### Consensus playbook
 
 16 ad credits/day (~$16) as baseline (12–16/day range cited) for 7–14 days minimum, one continuous campaign; never restart it or flicker it on/off (the algorithm penalizes gaps); keep multiple thumbnails in rotation, kill under-2%-CTR creatives; low CTR means the thumbnail/title/idea is the problem, not the algorithm; stop once home recs carry you. Variants: one dev consistently runs 40 credits/day for 10 days and hits algo on day 3–4; another claims algo can trigger on as little as 5 credits/day if the game deserves it; Leif (Slime RNG creator) method: 22 credits/day for 14 days, ~$300 total. The "~14 days" advice is a generous approximation of the crossover point.  (panic-dropped ~200k R$ into ads out of FOMO after stopping 3 days pre-algo; the sustained cadence exists to avoid this). Spend level trades off against CTR quality: "$5/day with a high-CTR thumbnail beats $16/day with standard CTR". A 15-min average session game should clear the engagement threshold for 16+ (all-ages) eligibility within about half a week at 16 credits/day, a rough pacing benchmark. Buying ad credits with Robux costs ~3x the dollar price ("100k Robux" of credits ≈ $100 of credits; credits priced at ~$0.98 at the DevEx rate); plan funding in USD directly in Ad Manager.
+
+#### Testing the paid-to-organic handoff
+
+<!-- temporal: 2026-10 -->
+
+A field-reported recommendation: stop ads when Home recommendation traffic starts rising. This reinforces the existing §11.2 stop-ads heuristic, but uses an earlier trigger. It also conflicts with §4's advice not to stop ads mid-spike. Neither is a universal rule: paid acquisition can still be profitable or necessary to fill multiplayer sessions.
+
+Treat rising Home traffic as a reason to test a budget reduction, not an automatic shutdown. Record paid and Home plays separately, spend, mature cohort retention, and server occupancy; avoid changing creative, gameplay, and budget together. Compare comparable days after allowing reporting lag and note whether organic play and session quality hold. Set a budget and recovery threshold before the test. A coincident organic rise does not prove ads caused or suppressed it, and a before/after comparison is not a randomized experiment. The official §2 model excludes externally acquired users' behavior from the Home ranking stage; do not teach that weak ad cohorts directly poison those ranking signals.
 
 #### Platform targeting and age gates
 
@@ -905,6 +931,10 @@ CONFLICT on plays vs engagement: engagement/HEP targeting gets fewer impressions
 - Moderation/questionnaire kill-shots: a moderation warning received *while* entering home recommendations can nuke traction permanently; the game gets "thrown to a different audience" and full-green stats collapsed in one day; content-maturity labels have been removed; warnings exist for off-platform links in bios (enforced); one game's CCU dropped by a third after being force-set all-ages. Scrub content/age-rating risks *before* pushing into algo. Maturity questionnaire answers have kill-shots: Roblox auto-flagged "chasing NPCs = violence" and locked a climbing 50-CCU game (headed to 20k) to 16+, gutting its audience; check how innocuous mechanics map to questionnaire categories before launch. Trend games die the same way: a maturity-questionnaire flag collapsed a horror game's CCU after ~700k R$ over 3 weeks.
 
 ## Sources
+
+Commissioned-rights legal sources (U.S., reviewed 2026-10-02):
+- [Copyright ownership and transfer, 17 U.S.C. §§201–204](https://www.copyright.gov/title17/92chap2.html)
+- [Circular 30: Works Made for Hire](https://copyright.gov/circs/circ30.pdf)
 
 Official Roblox sources, reviewed 2026-08-02 (RFY direction update reviewed 2026-08-07):
 

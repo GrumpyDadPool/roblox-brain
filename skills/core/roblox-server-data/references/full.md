@@ -185,6 +185,33 @@ end)
 - `message.Data` contains the published payload
 - Subscribe callbacks run in a separate thread; wrap them in pcall
 
+### Receive limits and capacity planning <!-- temporal: 2026-10 -->
+
+Send limits are per-server, but **receive** limits scale with server count and bind the whole game.
+Current official limits (per minute unless noted; subject to change):
+
+| Limit | Value |
+|-------|-------|
+| Messages sent per game server | 600 + 240 × players in server |
+| Messages received per topic | 40 + 80 × number of servers |
+| Messages received for entire game | 400 + 200 × number of servers |
+| Subscriptions per game server | 20 + 8 × players in server |
+| Subscribe requests per game server | 240 |
+| Topic / message size | 80 chars / 1 KiB |
+
+Planning consequences:
+
+- **Compute the receive budget at your max server count before choosing a fan-out design.** A
+  broadcast topic's per-topic cap (40+80×N) grows slower than the demand from N servers each
+  publishing, and the game-wide cap (400+200×N) is shared by *every* topic. At 100 servers the
+  game-wide cap is 20,400 msgs/min; a single hot topic at 90 servers caps at 7,240/min.
+- **The subscriber count is also capped** (20+8×players per server): own and clean up subscriptions; avoid creating duplicate subscriptions for every player.
+- **Subscribe churn is throttled separately** (240 req/min per server): reconnect storms after
+  throttling must back off, not retry in a loop.
+- Prefer *pull over push* at scale: instead of broadcasting state to every server, hold shared state
+  in MemoryStore and let servers read on demand; reserve MessagingService for low-frequency events.
+- Handle `PublishAsync` errors with bounded backoff. Do not infer non-delivery from a missing acknowledgement; retries must use the same idempotency key (see the ack pattern above).
+
 ## GlobalDataStore
 
 ### Overview
@@ -265,6 +292,39 @@ end
 ## MemoryStoreService
 
 MemoryStore is for temporary, high-throughput coordination. Its values expire, so it is a poor place for authoritative player progress or a permanent leaderboard.
+
+### Quotas and request-unit budgeting <!-- temporal: 2026-10 -->
+
+All MemoryStore quotas apply at the **game level, not per server** — every server in the experience
+draws from the same pool, so a fleet of servers sharing one hot structure can throttle each other.
+
+| Quota | Value | Notes |
+|-------|-------|-------|
+| Request units | 1000 + 120 × concurrent users per minute | Applies to every `MemoryStoreService` API call, game-wide |
+| Memory size | 64 KB + 1.2 KB × users | Users leaving take ~8 days to stop counting (traceback period) |
+| Structure size | 100 MB / 1,000,000 items | Per sorted map or queue |
+| Item value | 32 KB | Shard, compress, or split values beyond this |
+| Default TTL | 45 days | For `AddAsync`/`SetAsync`; set the shortest workable expiry so eviction frees quota |
+
+Request-unit costs are **not uniform** — batch-style calls bill per result, which is where budgets
+break:
+
+- `SortedMap:GetRangeAsync()` and `Queue:ReadAsync()`: one unit **per returned item** (empty result =
+  1 unit); a queue read also consumes +1 unit every 2 s while it waits on `waitTimeout`.
+- `HashMap:UpdateAsync()`: minimum 2 units.
+- `HashMap:ListItemsAsync()`: partitions scanned + items returned.
+
+Planning rules:
+
+- Budget request units against the **game-level** formula (1000+120×CCU), not a per-server number. At
+  high CCU the shared budget can still be consumed by many independent polling loops; account for
+  per-item charges and waiting reads, not just calls.
+- For high-frequency reads, a per-item-billed range read is the expensive path — keep page sizes
+  small, and prefer hash-map `GetAsync` (1 unit) over wide range scans where a key lookup suffices.
+- When the memory quota is hit, writes fail while reads/deletes succeed: expire aggressively and
+  delete processed queue items promptly, or new `AddAsync` calls fail until eviction.
+- Request-unit throttling raises an error response; treat it like the queue retry cases below —
+  back off game-wide, since retrying from more servers makes the shared shortage worse.
 
 ### Queue pattern
 
@@ -499,3 +559,9 @@ end
 ## User identity in shared data
 
 Keep leaderboard keys and cross-server payloads on a documented, consistent identity scheme; don't mix `UserId`-based keys with domain-scoped `User.Id` keys. For the identity distinction, serialization, and migration implications, see `roblox-data` §1a.
+
+## Feature-state and operational-delivery checks
+
+- Define configuration precedence and behavior for an explicit true, explicit false, absent key, failed read, cached value, and first server startup. If absence falls back to a code default, do not encode an intentional enabled state merely by deleting its override. Choose a safe initial state for each feature; a parked feature must not become active transiently during a failed read.
+- Include persisted overrides in release and rollback manifests. Test cold start with failed configuration access, later successful refresh, and code-default changes; report the observed state of serving servers separately from the desired control-plane state.
+- Name operational stages separately: command accepted, server executed, message dispatched, client rendered, and user acknowledged. A backend or server acknowledgement proves only its own stage. Verify display on the intended viewport with representative text length and duration before claiming the player saw an announcement; treat human acknowledgement as unknown unless it was actually collected.

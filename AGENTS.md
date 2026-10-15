@@ -35,6 +35,7 @@ Every SKILL.md must have:
 name: roblox-<name>
 description: >
   One-line description, under 150 chars.
+when_to_use: "Optional trigger phrases: the words users type when they need this skill (fix, change, review, audit, symptoms), under 300 chars."
 last_reviewed: YYYY-MM-DD
 sources:
   - https://create.roblox.com/docs/...    # or [original] for synthesis
@@ -67,7 +68,8 @@ Dense table or list format. The most useful info inline. Code examples in ```lua
 ## Validation
 
 Run `python3 scripts/validate_skills.py` before committing. Checks:
-- SKILL.md under 3,000 chars
+- SKILL.md under 3,000 chars (the `when_to_use` line is not counted)
+- `when_to_use`, when present, is a non-empty string under 300 chars
 - references/full.md under 50,000 chars
 - Description under 150 chars
 - Required frontmatter: name, description, last_reviewed, sources
@@ -98,6 +100,8 @@ CI runs on all branches (`.github/workflows/ci.yml`).
 - Mark temporal claims with event dates: `<!-- temporal: 2026-06 -->`
 
 ## Conventions
+
+- Descriptions must trigger on changing, fixing, debugging, reviewing and auditing, not only on building. Hosts match the user's words against `description` + `when_to_use`, and bug reports rarely say "implement". Put the main use case first, and put the symptoms users describe ("overlaps on mobile", "data not saving") in `when_to_use`.
 
 - Luau code blocks use ```luau (not ```lua)
 - API names in backticks: `UserInputService`, `RemoteEvent`

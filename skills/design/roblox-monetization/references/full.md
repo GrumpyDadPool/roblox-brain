@@ -33,15 +33,30 @@ For a Game Pass, the server can check ownership before enabling a durable featur
 ```luau
 local MarketplaceService = game:GetService("MarketplaceService")
 
-local function ownsPass(player: Player, passId: number): boolean
+local function ownsPass(player: Player, passId: number): (boolean?, string?)
     local ok, owns = pcall(function()
         return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
     end)
-    return ok and owns == true
+    if not ok then
+        return nil, tostring(owns) -- unknown; do not cache as non-ownership
+    end
+    return owns == true, nil
 end
 ```
 
 Cache a successful result when appropriate, but provide an invalidation or refresh path for purchases made during the session. Handle API failure as "not confirmed yet," not as a permanent denial or grant.
+
+## 2a. Centralized Game Pass benefits
+
+Operator/design pattern, grounded in the official [passes flow](https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/monetization/passes.md): one server owner maintains a pass-ID→benefit registry and the corresponding confirmed entitlement state. Features ask this owner for access rather than each implementing a purchase listener. Keep this registry distinct from repeatable Developer Product grants.
+
+- On `Players.PlayerAdded`, check configured pass ownership with `UserOwnsGamePassAsync` and reconcile benefits. Also cover players already present when the owner starts; prevent duplicate initialization. A failed request means unknown, not “does not own.” Never persist that failure as a negative entitlement.
+- Connect `MarketplaceService.PromptGamePassPurchaseFinished` once on the server. For a registered pass and successful purchase, invalidate your application’s stale negative cache and run the same benefit reconciliation used on join. The engine updates its ownership-query cache when this event fires. Server event results reflect the final purchase outcome; LocalScript results must not authorize benefits.
+- A benefit setter should be idempotent: “VIP access enabled” or “this pass contributes multiplier X,” not “add X again whenever a callback runs.” Compose multiple benefits from their sources instead of stacking them every respawn or refresh. Reapply character-specific presentation through the existing character lifecycle without duplicating the entitlement grant.
+- An external purchase during an existing session can take several minutes to propagate through the engine ownership cache. Define a bounded refresh path; reconnecting starts a new ownership check. Do not promise that an application cache invalidation bypasses Roblox’s cache.
+- Validate configured IDs and keep unknown passes from authorizing arbitrary benefits. Remove per-player caches at departure and ignore stale asynchronous results for a player/session that has ended. Keep subscriptions and paid consumables on their own lifecycle paths.
+
+Test existing ownership on join, purchase/cancel in-session, a query failure, repeated refresh, character respawn, player leave during the query, and two passes contributing to one benefit. Centralization removes duplicate plumbing, not product-specific rules or server validation.
 
 ## 3. Centralize Developer Product receipts
 
@@ -96,6 +111,10 @@ duplicate value on retry.
 
 Cross-owner atomicity: atomic receipt recording for one profile is not an atomic exchange between two profiles; for trading or gifting across profiles, see `roblox-data` full reference, section Cross-owner atomicity limits.
 
+With `BindReceiptHandler`, filtered handlers claim their configured product IDs; a catch-all handles remaining products. A matching bound handler takes precedence over `ProcessReceipt`; unmatched receipts can fall through to it. Duplicate registrations for the same receipt type/product combination or catch-all fail. Keep routing ownership explicit during migration instead of registering competing callbacks. Retain the returned `RBXScriptConnection` for intentional teardown, not routine disconnection while receipts remain outstanding.
+
+When wrapping a grant/save operation inside your receipt handler, `pcall` success means that operation did not throw, not that its domain result confirms a successful grant. Inspect both the protected-call flag and the returned domain result before acknowledging. `ProcessReceipt` has no timer-driven retry; bound receipts remain unresolved for a later delivery opportunity. Do not promise the two APIs have identical delivery timing.
+
 ## 3a. Receipt failure tests
 
 For every receipt implementation, force these cases in a test place:
@@ -118,7 +137,19 @@ Subscriptions need explicit entitlement checks and renewal handling. Keep these 
 - a downgrade path that does not delete unrelated player data;
 - UI that describes the actual cadence and benefit.
 
-Use the current subscription documentation for API names and platform eligibility. Do not hard-code assumptions about age, region, or payment availability.
+Use the current subscription documentation for platform eligibility. Do not hard-code assumptions about age, region, or payment availability.
+
+### Subscription status reconciliation
+
+Query `MarketplaceService:GetUserSubscriptionStatusAsync(player, subscriptionId)` on the server at join. The result separates `IsSubscribed` (active entitlement) from `IsRenewing` (whether it will renew); cancellation of renewal is not immediate loss of a paid current term.
+
+Even a successful query returns `IsSubscribed = false` while an initial payment is processing **or has failed**. Do not equate that response with a confirmed cancellation, and never grant a new paid benefit before active status is confirmed. Operator guidance: show pending status after purchase, reconcile again through the documented status event and bounded retries, and make any grace policy for previously confirmed benefits explicit rather than extending access indefinitely.
+
+Listen to **`Players.UserSubscriptionStatusChanged(player, subscriptionId)`**, then query the current status again. It is not a `MarketplaceService.SubscriptionStatusChanged` event carrying a trusted new-status argument. Prompt closure is not payment confirmation.
+
+This event is server-only and is recognized after the subscription purchase modal closes; an external purchase during play may need the documented prompt/refresh flow. Do not assume it is a push notification for every external billing change.
+
+Apply/revoke through one benefit reconciler, with separate ownership for permanent pass benefits and temporary subscription benefits. A failed lookup is unknown: surface and retry within a bounded policy rather than deleting unrelated data or treating it as confirmed expiry. On replacing a pass with a subscription, preserve legacy passholders’ permanent benefits. If a plan grants currency once per paid period, use the documented payment/history contract and a durable period-specific deduplication record; do not grant again on every status check.
 
 ## 5. Private servers and paid access
 
@@ -135,6 +166,22 @@ When `ArePaidRandomItemsRestricted` is true for a user, Roblox lists several tre
 If the restriction applies, odds disclosure alone is not one of the listed treatments. Ask which documented option suits the game. If the requested purchase flow conflicts with the restriction, explain that once and keep working on unaffected parts; do not silently disable the feature or treat an unverified policy check as a pass.
 
 Platform program names and payout rules change. Engagement-Based Payouts is historical/deprecated material, not a current implementation target; consult the current Creator Rewards documentation when working on platform payouts.
+
+### Dynamic prices and transfer arbitrage
+
+With Managed Pricing, fetch displayed product/pass prices at runtime from a client script using `MarketplaceService:GetProductInfoAsync` (and the matching `Enum.InfoType`); do not hard-code the default price in custom UI. Handle lookup failure as unavailable pricing rather than inventing an amount. Test with Creator Dashboard’s Dynamic Price Check and disable its test configuration afterward. Official source: [regional pricing](https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/monetization/regional-pricing.md).
+
+For transferable paid items, price differences create a separate trading/gifting risk. Use `GetUsersPriceLevelsAsync` to inform the server’s transfer policy; map results by user ID and handle missing/failed results explicitly. Fetch at join and do not carry price-level caches across sessions. These levels do not replace item ownership checks, and a price-difference threshold is a design choice, not universal Roblox policy.
+
+### Robux transfers are a distinct receipt flow
+
+Official [Robux transfers](https://create.roblox.com/docs/production/monetization/robux-transfers) use server-only `MarketplaceService:PromptRobuxTransferAsync(sender, receiverUserId, amount)` with Roblox-controlled confirmation and eligibility. Use the actual requesting player as sender; validate the recipient, finite positive integer amount, supported bounds, authorization and prompt frequency before calling. Do not confuse a transfer request ID with settlement. As documented when reviewed, the supported transaction range is 10–500 Robux; check current documentation before shipping. <!-- temporal: 2026-10 -->
+
+Transfers are a Roblox Plus subscriber feature. The current documented split is 10% to the game and 90% to the recipient; game earnings are DevEx-eligible and Roblox takes no transfer fee. Model reward economics against the appropriate sent/received amount, not a presumed 100% recipient payout. <!-- temporal: 2026-10 -->
+
+Register separate `BindReceiptHandler` handlers for `Enum.ReceiptType.RobuxTransferSender` and `Enum.ReceiptType.RobuxTransferReceiver`. Correlate using `TransferRequestId`; use the receipt’s unique `PurchaseId` for durable duplicate protection and distinguish receipt side/user so sender and receiver processing cannot suppress each other. Return `Enum.ReceiptDecision.Processed` only after any promised persistent benefit is committed; otherwise keep it `NotProcessedYet`. Do not use `Enum.ProductPurchaseDecision` for bound handlers.
+
+Receipts can settle after receiver approval and arrive on whichever server the relevant user is currently in, or on their next join if offline. Handle receipts without depending on the originating server’s in-memory request table. Sender `CurrencySpent` is sent amount; receiver `CurrencySpent` is received amount, so they are not interchangeable. Platform eligibility and limits remain Roblox-owned: do not fabricate age/subscription approval or direct Robux payouts.
 
 ## 7. Creator Rewards
 
@@ -179,9 +226,27 @@ Keep test product IDs and test entitlements out of production configuration.
 ## Monetization checklist
 
 - [ ] Prompting is client-side, granting is server-side.
-- [ ] There is one receipt callback and a product dispatch table.
+- [ ] Receipt routing has one owner per product/type; passes share a benefit reconciler.
 - [ ] Grants are idempotent and receipt identifiers are recorded.
 - [ ] Product configuration is trusted server data.
 - [ ] Policy and eligibility checks use current official documentation.
 - [ ] Prices, cadence, contents, and disclosures are visible before purchase.
 - [ ] Failures leave the receipt retryable instead of silently acknowledging it.
+
+## Catalog eligibility and deferred fulfilment
+
+### Separate catalog and purchase states
+
+Define display, selection, acquisition, purchase, ownership, and equip eligibility separately. An earn-only reward can remain visible with its actual acquisition path while the server rejects an invalid purchase. Test card creation, retained selection, action labels, ownership changes, and equipping together; a hidden card cannot exercise its existing acquisition-button code.
+
+### Isolate optional diagnostics
+
+Optional telemetry must not break an authoritative grant, trigger a duplicate grant, or cause an owed entitlement to disappear. Keep grant/idempotency state inside its established durable transaction boundary and isolate diagnostic failures from that result. Inject a telemetry failure into the purchase test; a successful counter test does not verify grant safety.
+
+### Settle delayed entitlements deliberately
+
+Model reserved, started, confirmed-delivered, cancelled, and recoverable states for paid effects. Identify operations bought with saved credits as well as those with receipt IDs; retries and duplicate callbacks must find the same authoritative operation.
+
+Define the effect-delivery boundary and the recovery policy for a started operation whose outcome is unknown. Do not promise exactly-once world execution when effect delivery and persistence cannot commit atomically. Do not refund merely because the buyer leaves if an already-running effect can still complete. Do not mark an effect delivered after shutdown cancellation prevented it from running.
+
+Test disconnect before and after start, explicit cancellation, duplicate completion, crash-left saved state, rejoin recovery, and shutdown ordering. Verify the actual owed entitlement after each case through the real save validator and grant owner; see `roblox-data`. Keep fulfilment of the game's owed item or credit distinct from a platform payment refund.

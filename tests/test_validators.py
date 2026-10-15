@@ -13,6 +13,12 @@ from scripts import validate_skills, verify_api_drift, verify_source_urls
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Mirror-fixture payload as raw bytes. Path.write_text() translates "\n" to
+# os.linesep on Windows, so the bytes on disk would not match a hash taken from
+# the LF literal. Write and hash the same bytes object so the recorded identity
+# holds on every platform (issue #3).
+PART_YAML_BYTES = b"id: Part\nproperties:\n  - name: Part.Position\n"
+
 
 class ValidatorRegressionTests(unittest.TestCase):
     def test_reference_paths_from_full_reference_resolve_at_skill_root(self):
@@ -678,11 +684,11 @@ class ValidatorRegressionTests(unittest.TestCase):
             mirror_dir = Path(tmp) / "creator-docs"
             class_dir = mirror_dir / "classes"
             class_dir.mkdir(parents=True)
-            (class_dir / "Part.yaml").write_text("id: Part\nproperties:\n  - name: Part.Position\n")
+            (class_dir / "Part.yaml").write_bytes(PART_YAML_BYTES)
             fresh_meta = {
                 "source_url": "https://example.com/Part.yaml",
                 "retrieved_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "content_sha256": hashlib.sha256(b"id: Part\nproperties:\n  - name: Part.Position\n").hexdigest(),
+                "content_sha256": hashlib.sha256(PART_YAML_BYTES).hexdigest(),
             }
             (class_dir / "Part.yaml.meta.json").write_text(json.dumps(fresh_meta))
             stale_meta = dict(fresh_meta, retrieved_at="2020-01-01T00:00:00Z")
@@ -728,11 +734,11 @@ class ValidatorRegressionTests(unittest.TestCase):
             mirror_dir = root / ".cache" / "creator-docs"
             class_dir = mirror_dir / "classes"
             class_dir.mkdir(parents=True)
-            (class_dir / "Part.yaml").write_text("id: Part\nproperties:\n  - name: Part.Position\n")
+            (class_dir / "Part.yaml").write_bytes(PART_YAML_BYTES)
             metadata = {
                 "source_url": "https://example.com/Part.yaml",
                 "retrieved_at": "2020-01-01T00:00:00Z",
-                "content_sha256": hashlib.sha256(b"id: Part\nproperties:\n  - name: Part.Position\n").hexdigest(),
+                "content_sha256": hashlib.sha256(PART_YAML_BYTES).hexdigest(),
             }
             (class_dir / "Part.yaml.meta.json").write_text(json.dumps(metadata))
 
@@ -782,7 +788,7 @@ class ValidatorRegressionTests(unittest.TestCase):
             mirror_dir = root / ".cache" / "creator-docs"
             class_dir = mirror_dir / "classes"
             class_dir.mkdir(parents=True)
-            (class_dir / "Part.yaml").write_text("id: Part\nproperties:\n  - name: Part.Position\n")
+            (class_dir / "Part.yaml").write_bytes(PART_YAML_BYTES)
             metadata = {
                 "source_url": "https://example.com/Part.yaml",
                 "retrieved_at": "2026-01-01T00:00:00Z",
@@ -833,7 +839,7 @@ class ValidatorRegressionTests(unittest.TestCase):
             mirror_dir = root / ".cache" / "creator-docs"
             class_dir = mirror_dir / "classes"
             class_dir.mkdir(parents=True)
-            (class_dir / "Part.yaml").write_text("id: Part\nproperties:\n  - name: Part.Position\n")  # no sidecar
+            (class_dir / "Part.yaml").write_bytes(PART_YAML_BYTES)  # no sidecar
 
             original_dir = v.MIRROR_DIR
             original_registry = v.REGISTRY_PATH

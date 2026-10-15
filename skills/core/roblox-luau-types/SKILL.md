@@ -1,18 +1,20 @@
 ---
 name: roblox-luau-types
-description: "Use for Luau annotations, generics, unions, narrowing, strictness, sealed tables, module type exports, typed metatables, or new-solver features."
-last_reviewed: 2026-10-02
+description: "Use when adding or fixing Luau type annotations: generics, unions, narrowing, strict mode, sealed tables, module type exports, typed metatables."
+when_to_use: "Also for type checker errors and warnings, --!strict migration, luau-lsp diagnostics, and reviewing typed APIs."
+last_reviewed: 2026-10-14
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/luau/type-checking.md
   - https://luau.org/types/type-functions/
   - https://luau.org/types/tables
+  - https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md
 ---
 
 # Luau Type System
 
 ## When to Load
 
-Load for Luau types: annotations, generics, unions, narrowing, sealed/unsealed tables, strictness (`--!strict` vs `--!nonstrict`), module type exports, metatable typing, and new-solver features (`keyof`, `setmetatable<T, M>`, type functions, `read`). For syntax, `roblox-luau-core`; for OOP/async, `roblox-luau-patterns`.
+Load for Luau annotations, inference, narrowing, strictness, exports, and solver features. Syntax: `roblox-luau-core`; lifecycle/scheduling: `roblox-luau-patterns`.
 
 ## Quick Reference
 
@@ -26,7 +28,11 @@ Load for Luau types: annotations, generics, unions, narrowing, sealed/unsealed t
 
 **Unions:** `local id: string | number` is a union; prefer tagged unions (`type State<T> = {kind:"loading"} | {kind:"ready", value:T}`) and discriminate on `kind` to narrow.
 
-**Narrowing:** `typeof(v) == "string"` narrows primitives, `instance:IsA("BasePart")` narrows Instances, `assert(v, "msg")` removes `nil`. Discriminants narrow tagged unions; full reference has worked examples.
+**Narrowing:** `typeof`, `IsA`, assertions, and tagged discriminants refine types; examples in full.md.
+
+**Missing keys:** use `{ [K]: V? }` when lookups may miss; narrow before use.
+
+**Closed vocabularies:** prefer literal unions; `never` checks can flag missing branches. Keep requires statically resolvable. Practitioner guidance: full.md.
 
 **Generics:** Use when input→output type matters: `function first<T>(list: {T}): T?`, or `type Result<T> = {success: boolean, value: T?}`. Never replace with `any`.
 
@@ -38,6 +44,6 @@ Load for Luau types: annotations, generics, unions, narrowing, sealed/unsealed t
 
 **Trust boundaries:** Annotations contract with the compiler, not runtime data. Remotes, DataStores, HttpService, and attributes still need checks; inside a trusted boundary, let types carry the load.
 
-**Key mistakes:** `any` propagation in nonstrict, sealing too early, unions without discriminants, annotating every local, deleting new-solver syntax without checking the solver setting.
+**Review:** no hidden `any`, premature sealing, unchecked casts, or solver-blind rewrites.
 
 > Full reference: see `references/full.md`

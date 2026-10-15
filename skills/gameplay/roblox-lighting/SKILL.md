@@ -1,6 +1,7 @@
 ---
 name: roblox-lighting
-description: "Use for Roblox lighting, atmosphere, day/night, or post-processing effects."
+description: "Use when setting up or changing Roblox lighting, atmosphere, day/night cycles, or post-processing effects."
+when_to_use: "Also when a scene looks flat, too dark or washed out, shadows are wrong, or lighting hurts mobile performance."
 last_reviewed: 2026-07-26
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/environment/lighting.md

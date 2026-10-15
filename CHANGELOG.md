@@ -2,6 +2,37 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [2.3.1] - 2026-10-14
+
+### Fixed
+
+- The architecture field notes gave the wrong limit for `NumberValue`. The 9.22e18 ceiling belongs to `IntValue`, which holds a signed 64-bit integer. `NumberValue` holds a double: magnitude up to about 1.79e308, but whole numbers are stored exactly only to 2^53, about 9 quadrillion. Both engine definitions are linked.
+- The mirror snapshot regression tests wrote their fixtures in text mode and hashed a fixed LF byte string, so the suite reported a false identity mismatch on Windows. Fixtures now write the same bytes they hash, and the tests pass on every platform.
+
+## [2.3.0] - 2026-10-14
+
+### Added
+
+- Mobile-first GUI guidance: design order from the smallest landscape phone, the screen regions Roblox UI already occupies, safe-area containers, measured placement, overlaps caused by state combinations, reflowing small-screen windows, console and TV rules, and a device matrix for the Simulator and Controller Emulator.
+- Cross-device input guidance: gamepad focus ownership (entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close), hybrid presentation from `PreferredInput`, touch action buttons, a single gameplay input gate, cancelling held actions, gamepad tool activation, platform button hints, and a cross-device test checklist.
+- First-session onboarding traces alongside analytics funnels, with bounded collection, save ownership, privacy, retention, and offline analysis guidance.
+- Monetization guidance for subscriptions, Robux transfer receipts, dynamic prices, and price-aware gifting, plus centralized Game Pass benefits and purchase refresh handling.
+- Reuse-first integration guidance for proven project modules.
+- Feature-level threat modeling, and Luau pitfalls around literal search, Unicode, binary strings, and repeat loops.
+- Remote transport and bindable boundaries, cross-server receive limits, and shared MemoryStore quota planning.
+- Text entry, grid layout, truncation, RichText safety, and legacy GUI API migration guidance.
+- Editor-safe source changes, undo recordings, Script Sync conflict handling, untrusted place-content boundaries, and asset-permission diagnosis.
+- Lessons from a full build, launch, and live-ops cycle of a round-based game, across the collaboration, Studio MCP, publishing, tooling, and analytics skills.
+
+### Changed
+
+- Every skill's description now triggers on changing, fixing, debugging, reviewing, and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). `validate_skills.py` accepts the optional field, and AGENTS.md documents the convention.
+- Removed individual community attributions and community-sourced field notes from `roblox-architecture`, `roblox-tooling`, and `roblox-growth-design`; the underlying guidance stays as field-reported synthesis, without named contributors.
+
+### Fixed
+
+- `roblox-input`: `PreferredInput` is typed `Enum.PreferredInput`, not `Enum.UserInputType`, and the example now observes `PreferredInput`.
+
 ## [2.2.0] - 2026-10-02
 
 ### Added

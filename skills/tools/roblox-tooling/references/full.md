@@ -70,7 +70,46 @@ Key lest facts (verified against its docs, v0.6.0 line, MIT, created 2026-07; di
 
 The line: if the user asks "should I add linting/formatting/tests?" or is hand-doing something these automate, offer the option and the tradeoff, then let them choose. If the project already has a toolchain, extend it; do not introduce a new ecosystem unprompted. The exceptions that justify recommendation: files-first source control (Rojo) and CI reproducibility, when the user is clearly trying to version or automate their project.
 
-## 1d. Language choice: Luau vs Roblox-TS (for agents and greenfield projects)
+## 1d. Editor-safe script mutation and undo recording (verified 2026-10)
+
+Plugins and MCP-style tooling that change script source from outside the human editor must handle two facts documented on the engine classes (`ScriptEditorService`, `ChangeHistoryService` creator-docs YAMLs):
+
+### UpdateSourceAsync beats a raw `Script.Source` write
+
+`ScriptEditorService:UpdateSourceAsync(script, callback)` "generates new content from the old script and updates the script editor if it's open, or the `Script` instance if the script editor is closed." Writing `script.Source = text` directly instead updates the property but can be stale or rejected relative to the editor's buffer:
+
+- If the script **is open** in the Script Editor, `UpdateSourceAsync` issues a request to the editor. The editor "may reject this update if the `Script.Source` property was out of date with the user's version of the script when this function was called, in which case the callback will be re-invoked and the attempt will be repeated." A direct property write has no such re-derivation loop and can clobber in-editor edits.
+- The callback **may not yield**; if it returns `nil`, the operation is cancelled. `UpdateSourceAsync` yields until the operation is cancelled or succeeds — call it in a coroutine/task context appropriate for your host.
+- Read the current text with `ScriptEditorService:GetEditorSource(script)` first: it returns "the edit-time source" — the text the editor displays (or would display) — which "is not always consistent with the `Script.Source` property." Deriving a patch from `Source` while the document is open diffs the wrong buffer.
+
+Operator contract: transform the callback's current source, not a previously captured full replacement. Keep the transform non-yielding and safe to re-run; return `nil` if its expected context no longer matches. Catch and report API errors, then read back with `GetEditorSource` and compare against intent before execution.
+
+For an MCP bridge, read the script, apply bounded edits through the bridge's supported source tool, and read back before running. Verify how that bridge handles open editor buffers; do not assume a tool name guarantees use of `UpdateSourceAsync`.
+
+### ChangeHistoryService: undo-scoped, bounded, best-effort
+
+Plugins **must** wrap data-model mutations in a recording: `TryBeginRecording(name, displayName)` returns an identifier string (or `nil` if a recording is already in progress for the plugin, or the user is in a solo playtest), then `FinishRecording(identifier, operation)` with `Enum.FinishRecordingOperation.Commit` (or `Append` to merge with the previous recording) commits it, and `Cancel` "cancels the recording, automatically undoing any work in progress." Rules:
+
+- Wrap **one bounded mutation** per recording. An undo waypoint spans exactly what happened between begin and finish, so a sprawling multi-phase mutation produces an all-or-nothing undo the user cannot step through.
+- `TryBeginRecording` returning `nil` is a signal to stop and report, not a reason to mutate unrecorded.
+- **A recording is not a rollback guarantee.** `Commit` records the changes into the undo stack; it does not validate them. If the post-state is wrong, the compensation is either the user's undo or an explicit inverse edit you apply and record in its own recording — do not claim `Cancel` "reverts" an already-committed mutation. `Cancel` applies to work in progress before finishing, and `SetWaypoint` is documented as deprecated soon in favor of `TryBeginRecording`.
+- `ChangeHistoryService` is not enabled at runtime; calling its methods in a running experience has no effect. It is PluginSecurity and edit-time only.
+
+### Script Sync: first-party file sync, conflict semantics
+
+Roblox ships built-in [Script Sync](https://create.roblox.com/docs/scripting/sync) for scripts. Where it overlaps agent workflows:
+
+- Sync is set per **folder** (Explorer right-click → Sync to…), resumes automatically on place open, and syncs only `Script`, `LocalScript`, `ModuleScript`, and `Folder` instances. All other instances in a synced folder are ignored; scripts with attributes or tags are also ignored — and Studio warns that this "can lead to data loss" around create/delete resolution.
+- File suffix determines the instance type on sync: `name.luau` → ModuleScript, `name.server.luau` → Script with `Server` RunContext, `name.client.luau` → Script with `Client` RunContext, `name.local.luau` → LocalScript, `name.legacy.luau` → `Legacy` RunContext, `name.plugin.luau` → `Plugin` RunContext, `name/init.*.luau` → script instance with children. (Note this is Script Sync's own convention — a `name.server.luau` becomes a Script *with a RunContext*, not a legacy LocalScript.)
+- **Conflict semantics on resume:** when starting or resuming sync with differences between Studio and disk, Script Sync shows a resolution dialog listing which scripts will be added, modified, or deleted on each side; the choice is **Keep Studio** vs **Keep Disk**, not a merge. The "Resume conflicted sync on place open" setting defaults to **Do not resume** to force manual resolution. An agent editing scripts in a synced place must read that dialog state, not assume either side won.
+- Deletion is selective: removing a synced script or folder removes only Luau scripts and supported files — non-Luau files, folders it does not manage, and non-script assets are preserved.
+- Team Create: collaborators can overwrite each other when multiple people sync and edit the same script concurrently; the docs advise avoiding that workflow. Synced instances show a sync icon in the Explorer.
+- Scale limits (documented): up to 10,000 scripts per top-level synced instance and up to 128 top-level synced instances.
+- Deleting a top-level synced instance on disk can throw in Studio; the documented order is stop sync in Studio first (choosing whether to delete files), then delete in Studio.
+
+For Rojo projects, Script Sync and `rojo serve` are competing file writers on the same place; do not run both against the same instance tree (see §1b source-of-truth paradigm).
+
+## 1e. Language choice: Luau vs Roblox-TS (for agents and greenfield projects)
 
 Verified state, August 2026 (npm + GitHub APIs): roblox-ts ~11.4k npm downloads/month, 1.3k stars, but the canonical npm release is still 3.0.0 (Sep 2023, TS 5.2-era); a community fork (`@isentinel/roblox-ts`, 4.0.x, provenance unverified) carries newer releases. That is a niche within Roblox dev; most shipped experiences and nearly all community libraries (TopbarPlus, ProfileStore, FastCast, jecs) are Luau.
 
@@ -276,66 +315,74 @@ A verified claim is worth pinning: if you maintain an agent-facing skill library
 - [ ] Standalone scripts declare their runtime assumptions.
 - [ ] CI produces a reproducible build or reports why it cannot.
 
-## Community tool stack (Tizzy discord, Jul–Sep 2026)
+## Field-reported tool and resource stack
 
-Field-reported from a live dev Discord (Jul–Sep 2026). Community practices and third-party services, not verified or endorsed tooling; treat URLs, pricing, and availability as temporal. <!-- temporal: 2026-09 -->
+Practices and third-party services reported by working developers. Not verified or endorsed tooling; treat URLs, pricing, and availability as temporal. <!-- temporal: 2026-09 -->
 
 ### AI thumbnail / icon pipelines
 
-There is a genuine CONFLICT in the community data on whether AI thumbnails help or hurt CTR; the resolution is genre-dependent:
+There is a genuine CONFLICT in the reported data on whether AI thumbnails help or hurt CTR; the resolution is genre-dependent:
 
-- **AI beats paid artists (repeated first-hand):** a $50 commissioned thumb got 1% CTR vs 3% for an AI one; AI thumbs routinely hit 8–10%+ qPTR (best observed ~14%); paid artists charged $35–150 per thumbnail pre-AI vs ~$16/mo AI subscriptions. Spend on iteration volume, not single commissions. (TwoGodTwoForce 2026-08-03; Gosu 2026-07-27/08-23; Blueshell_Dev 2026-07-21)
-- **CONFLICT: AI thumbs measurably hurt CTR for non-slop games:** players recognize and skip obvious AI images; visible artifacts (uncanny faces) reduce perceived game quality. Reported to work only for brainrot/slop-adjacent genres. Mitigation: feed the AI references of successful same-genre thumbnails and A/B test whether the result reads "too AI." (Every 2026-08-25; Gatto 2026-08-30; lanmi 2026-09-17; charlie 2026-07-30; DampTruff 2026-07-15; cyntile 2026-07-18)
-- **Workflow both camps agree on:** a detailed template prompt (one big bacon-hair avatar doing the action, black outlines, studio lighting, reward popups, mobile-legible, 16:9), then test many variants through Ads Manager and let CTR pick winners. From-scratch prompts produce generic output; always feed a reference image and describe targeted changes ("replace the gun with my game's mechanic"). GPT-class models are good at icons and high-saturation imagery, bad at faces and text; the standard pipeline is AI-generate the scene, then add text/faces by hand (Figma/Photopea). "Nano banana" rated better than GPT image 1. (Flow 2026-08-23; XOO 2026-08-23; Zriptic 2026-08-02; Seth/transcendence/Jerome 2026-08-27; Aura 2026-08-09)
+- **AI can beat paid artists:** a $50 commissioned thumb got 1% CTR against 3% for an AI one; AI thumbs routinely hit 8–10%+ qPTR (best observed ~14%); paid artists charged $35–150 per thumbnail pre-AI against ~$16/mo AI subscriptions. Spend on iteration volume, not single commissions.
+- **CONFLICT: AI thumbs measurably hurt CTR for non-slop games:** players recognize and skip obvious AI images; visible artifacts (uncanny faces) reduce perceived game quality. Reported to work only for brainrot/slop-adjacent genres. Mitigation: feed the AI references of successful same-genre thumbnails and A/B test whether the result reads "too AI."
+- **Workflow both camps agree on:** a detailed template prompt (one big bacon-hair avatar doing the action, black outlines, studio lighting, reward popups, mobile-legible, 16:9), then test many variants through Ads Manager and let CTR pick winners. From-scratch prompts produce generic output; always feed a reference image and describe targeted changes ("replace the gun with my game's mechanic"). GPT-class models are good at icons and high-saturation imagery, bad at faces and text; the standard pipeline is AI-generate the scene, then add text and faces by hand (Figma/Photopea). "Nano banana" rated better than GPT image 1.
 
-**Thumbnail pre-testing tools** (test CTR before committing ad spend; reported by Blueshell_Dev 2026-07-21; RealYoKaglier 2026-08-07; FuturisticGames 2026-07-15/08-04; Zacky0s 2026-08-05; idk 2026-08-11; dot 2026-07-10; BlueMaster 2026-07-31; Zayuh 2026-07-10; MrX 2026-07-27):
+**Thumbnail pre-testing tools** (test CTR before committing ad spend):
 
-- qptr.io: community tool by "Michael", recommended by Tizzy; devs pair it with ChatGPT ("show it the home-recs row, ask which thumbnail stands out to kids")
+- qptr.io: previews a thumbnail or icon in a simulated home-recs row; devs pair it with ChatGPT ("show it the row, ask which thumbnail stands out to kids")
 - vizzbees.com: AI thumbnail generator even AI-skeptics vouch for
-- rothumbs / RoThumbs: AI generation (paid); RoClicks: free thumbnail/icon generator built from what's charting (bring-your-own Google/OpenAI key); several devs just use nano banana pro (free) directly
+- rothumbs / RoThumbs: AI generation (paid); RoClicks: free thumbnail/icon generator built from what is charting (bring-your-own Google/OpenAI key); several devs just use nano banana pro (free) directly
 - DIY style-copy pipeline: collect reference thumbnails → train a LoRA with Kohya_ss → run in ComfyUI/Stable Diffusion with a trigger word
 - PixelForge ($5): cheap image-studio alternative to a free-but-slow Blender render setup
 
-**Production pipelines in use:** Gemini/ChatGPT layouts (with references from successful games) → clean up with RoThumbs; "ChatGPT Images + Photopea is a GOATED combo"; Fiverr human artists at ~3–4 thumbnails for £20; big-bang.studio (the studio behind Rivals and 99 Nights artwork) as study material; free render stack = Blender + free rigs + Photopea (pre-rendered baseplates, HP bars, etc. freely available). (beahrz/Zriptic 2026-07-12; Doug 2026-09-14; Joel 2026-09-17; Ariex 2026-08-07; N3Developer 2026-07-20)
+**Production pipelines in use:** Gemini/ChatGPT layouts (with references from successful games) → clean up with RoThumbs; ChatGPT Images with Photopea is a common pairing; Fiverr human artists at ~3–4 thumbnails for £20; big-bang.studio (the studio behind the Rivals and 99 Nights artwork) as study material; free render stack = Blender + free rigs + Photopea (pre-rendered baseplates, HP bars, and similar are freely available).
 
-**AI icon pipeline that works:** have Claude render each 3D model as a screenshot from an angle with no background + black stroke: 20 car icons in 2 minutes; one dev built a custom icon maker (model screenshot → stroke → auto-upload via API). (blodi 2026-08-07; rip_HaoshokuRed 2026-08-12)
+**AI icon pipeline that works:** have an AI agent render each 3D model as a screenshot from an angle with no background and a black stroke: 20 car icons in 2 minutes; one dev built a custom icon maker (model screenshot → stroke → auto-upload via API).
 
-Ads note: Ads Manager natively rotates multiple thumbnails as creatives in one campaign (auto-rotates, reports per-creative CTR, pushes winners) and is sufficient for 99% of games; if ads "don't work," the failure is almost always retention, not the channel. (Duphalak 2026-07-11; john 2026-07-06)
+Ads note: Ads Manager natively rotates multiple thumbnails as creatives in one campaign (auto-rotates, reports per-creative CTR, pushes winners) and is sufficient for most games; if ads "don't work," the failure is almost always retention, not the channel.
 
-### Asset / resource stack (community union)
+### Asset / resource stack
 
-- Packages/data: wally.run community frameworks (Signal by sleitnick, Janitor, Promise v4); ProfileStore/ProfileService for data; roproxy.com as proxy for Roblox web-API calls from games. (Blueshell_Dev 2026-07-12; Qizzy 2026-07-29)
-- Figma→Roblox UI: roimport.com (free importer); design at 16:9 for PC, export, scale with UIScale; preview/test UI code without launching the game via hoarcekat or the Vide framework; UI packs preferred over AI-generated UI frames. (Dapathy 2026-08-09; val 2026-07-30; Haze 2026-08-09; Bapo 2026-07-18)
-- AI 3D: Meshy/Tripo3D for image-to-3D (~$1 first month; meshy.ai for bulk small models), but building/modeling is the skill AI handles worst, along with non-basic UI; AI meshes are typically badly over-poly, check vertex counts before import; Blender + Claude/Astra for models, tripo3d for reference-image→3D instead of burning chat usage. (Zriptic 2026-07-10; FuturisticGames 2026-07-15; thug 2026-08-22; WASIMALT/Luna 2026-07-14; CraseDev 2026-09-14; Nyx 2026-09-01)
-- Audio/UI assets: nocapmocap.com (mocap); Moon Animator ($30) + EasyWeld plugin; builtbybit.com templates/asset packs (e.g. SFX megapacks); gvesster.itch.io free icon pack; uiresouces.com UI grid patterns; epicstockmedia.com UI SFX packs; devforum "massive sound kit" (142 categorized sounds); itch.io UI kits (rblx-essentials) for weak GUI skills; Pixabay/Creator Store sounds; RoVisuals free hourglass/icon generator for ad creatives; Vanilla 3 icon set (DevForum) for Studio editor icons. (multiple contributors, Jul–Sep 2026)
-- RoPrice (DevForum tool): bulk-creating/editing dev products and gamepasses. (SteamedBunX 2026-07-25)
+- Packages/data: wally.run community frameworks (Signal, Janitor, Promise v4); ProfileStore/ProfileService for data; roproxy.com as a proxy for Roblox web-API calls from games.
+- Figma→Roblox UI: roimport.com (free importer); design at 16:9 for PC, export, scale with UIScale; preview and test UI code without launching the game via hoarcekat or the Vide framework; UI packs preferred over AI-generated UI frames.
+- AI 3D: Meshy/Tripo3D for image-to-3D (~$1 first month; meshy.ai for bulk small models), but building and modeling is the skill AI handles worst, along with non-basic UI; AI meshes are typically badly over-poly, so check vertex counts before import; Blender plus an AI assistant for models, tripo3d for reference-image→3D instead of burning chat usage.
+- Audio/UI assets: nocapmocap.com (mocap); Moon Animator ($30) + EasyWeld plugin; builtbybit.com templates and asset packs (e.g. SFX megapacks); gvesster.itch.io free icon pack; uiresouces.com UI grid patterns; epicstockmedia.com UI SFX packs; a devforum "massive sound kit" (142 categorized sounds); itch.io UI kits (rblx-essentials) for weak GUI skills; Pixabay/Creator Store sounds; RoVisuals free hourglass/icon generator for ad creatives; the Vanilla 3 icon set (DevForum) for Studio editor icons.
+- RoPrice (DevForum tool): bulk-creating and editing dev products and gamepasses.
 
 ### AI coding stack consensus
 
-- Practical Roblox-specific workflow: keep the game in the project folder so a new AI session inherits context; connect Studio via MCP so the AI reads real code; rojo with git + selene linting for version-controlled scripting. Studio's MCP is token-hungry; sequential MCP + rojo + Codex is the leaner setup. (Nullborne 2026-07-17; chris 2026-08-23; BPAndrew 2026-07-10; Gordito 2026-07-15)
-- **Studio MCP bug warning: collaborative editing can kill the Studio session and unsaved data when using Studio MCP; turn collaborative edits off and keep file backups.** (dalph06, 2026-07-10)
-- Open Cloud API largely removes AI-agent friction: an AI with API access can publish images, create gamepasses/dev products, and set prices itself; "AI as studio assistant" is viable end-to-end. (Nyx, 2026-08-10)
-- Performance debugging with AI: don't prompt "optimize my code"; ask for real diagnostics via MicroProfiler and script profiling to find CPU spikes; Humanoid instances are expensive at scale (hundreds of NPCs need rigs without Humanoids). (terms 2026-08-22; kah 2026-08-21)
-- Local models: Qwen3.8-27B on a 24GB+ Apple Silicon Mac inside an agentic harness was specifically recommended; pairing Studio MCP with local Ollama models was asked about but unconfirmed. (jan 2026-08-20; majorFraud 2026-08-17)
-- Community Claude skills circulating: roblox-brain (this repo) and dstack (github.com/HungryKelvin123/dstack); community opinion: most community skills are "documentation wrappers"/bloat. (keltec 2026-07-14; CraseDev 2026-09-14; Nyx 2026-09-01)
+- Practical Roblox-specific workflow: keep the game in the project folder so a new AI session inherits context; connect Studio via MCP so the AI reads real code; rojo with git and selene linting for version-controlled scripting. Studio's MCP is token-hungry; sequential MCP + rojo + Codex is the leaner setup.
+- **Studio MCP bug warning: collaborative editing can kill the Studio session and unsaved data when using Studio MCP; turn collaborative edits off and keep file backups.**
+- The Open Cloud API largely removes AI-agent friction: an AI with API access can publish images, create gamepasses and dev products, and set prices itself; "AI as studio assistant" is viable end to end.
+- Performance debugging with AI: don't prompt "optimize my code"; ask for real diagnostics via MicroProfiler and script profiling to find CPU spikes; Humanoid instances are expensive at scale (hundreds of NPCs need rigs without Humanoids).
+- Local models: a mid-size model on a 24GB+ Apple Silicon Mac inside an agentic harness was specifically recommended; pairing Studio MCP with local Ollama models was asked about but unconfirmed.
 
 ### Playtester channels
 
-QA Central Discord organizes scheduled test sessions (recommended repeatedly, incl. by coaches); Hidden Devs has a tester-matching board; pay bug-finders by severity to increase coverage; Creator Hub "audience" section feedback (likes/dislikes) also counts as feedback entries. (NotAntPanda 2026-09-13; GameComposer 2026-08-21; tora/Kam 2026-08-23; ClosedTofu 2026-09-16)
+Community tester servers organize scheduled test sessions; tester-matching boards exist; pay bug-finders by severity to increase coverage; the Creator Hub "audience" section feedback (likes/dislikes) also counts as feedback entries.
 
 ### Learning resources
 
-TizzyRBLX12 for monetization ("the GOAT"), RoBuilder for building, gfxcomet for UI, BrawlDev's tutorials as the standard on-ramp (replacing AlvinBlox/PeasFactory), Roblox's official learn channel (microprofiler videos for frame optimization) and its basic+advanced creator tutorials, refactoring.guru design-patterns catalog for game code architecture; consensus warning: avoid "tutorial hell"; math prerequisites for gameplay physics: trig, basic calculus, basic linear algebra. (bac 2026-07-26; Gosu 2026-08-20; Zayuh 2026-07-14; Davide 2026-07-13; Otorina3d 2026-08-12; freakyfinch457 2026-07-13)
+Roblox's official learn channel (MicroProfiler videos for frame optimization) and its basic and advanced creator tutorials; refactoring.guru's design-patterns catalog for game code architecture; consensus warning: avoid "tutorial hell"; math prerequisites for gameplay physics: trig, basic calculus, basic linear algebra.
 
 ### Analytics and ops tools
 
-- Funnels are the underused analytics feature: devs who set them up immediately find exact drop-off steps; pair with watching a real fresh player session. (john 2026-07-06; Zak 2026-08-04; Carter 2026-08-06)
-- Pull your own metrics into Grafana; the Roblox creator dashboard lags badly (24–48h on stats); self-hosted dashboards surface CCU/monetization trends faster. (Surfrdan, 2026-07-08)
-- Trend-target tooling: a top dev runs a scraper detecting newly released games and pulls owner contact info within minutes of release; others scrape front-page thumbnails into a folder and have Claude pick references + write generation prompts; top-1000-game cutoff observed at 1,399 concurrent players. (740k 2026-07-28; Zriptic 2026-07-22; amend 2026-08-21)
+- Funnels are the underused analytics feature: devs who set them up immediately find the exact drop-off steps; pair with watching a real fresh player session.
+- Pull your own metrics into Grafana; the Roblox creator dashboard lags badly (24–48h on stats); self-hosted dashboards surface CCU and monetization trends faster.
+- Trend-target tooling: some top devs run a scraper that detects newly released games and pulls owner contact info within minutes of release; others scrape front-page thumbnails into a folder and have an AI pick references and write generation prompts; the top-1000-game cutoff was observed at 1,399 concurrent players.
 
 ### Identified tool gaps
 
-Two tool concepts the community wants but says do not exist yet:
+Two tool concepts reported as not existing yet:
 
-- **Session-replay plugin**: records player positions/actions for onboarding analytics and bug repro. (umbri, 2026-08-11)
-- **Balance simulator**: run 100,000 simulated sessions to tune progression/balance values in seconds instead of weeks of hand-tuning. (740k, 2026-07-24)
+- **Session-replay plugin**: records player positions and actions for onboarding analytics and bug repro.
+- **Balance simulator**: run 100,000 simulated sessions to tune progression and balance values in seconds instead of weeks of hand-tuning.
+
+## Release isolation, replacement, and rollback
+
+- Identify the files, place objects, generated assets, and configuration that feed the connected Studio candidate. Keep unfinished next-release work in an isolated copy or worktree whose sync is disconnected from that candidate. Inspect Studio before publishing; a clean commit does not prove the installed payload excludes uncommitted changes.
+- Before replacing a generated tree, compare the proposed output with the installed tree. List removed paths, changed classes, required properties, scripts, and functional metadata; distinguish deliberate moves from losses. Preserve a recoverable snapshot and require each intended removal to be accounted for before replacement. Inspect the resulting behavior as well as the structural diff.
+- If installed work has drifted from its builder, reconcile the approved changes into the actual source of truth before rebuilding. Run the replacement check against the known loss case to confirm it catches the regression.
+- Before a targeted revert, preserve the current source and installed state, including uncommitted approved changes. Establish the last approved working baseline from evidence; the last commit is not automatically that baseline. Restore only the requested scope and compare unaffected behavior afterward.
+- For a historical build, inventory code, world geometry, UI, assets, persisted switches, and save-schema compatibility. Restore the corresponding place-owned content as well as source where required. Test old-code load and subsequent write against representative current saves without touching production data.
+- Write down essential fixes retained in an experimental rollback, the exact control payload, and any comparability limits. Do not call a mixed historical build an unchanged control. Preserve a tested way to return to the current working state.

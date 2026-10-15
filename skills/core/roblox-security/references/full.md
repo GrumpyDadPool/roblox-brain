@@ -9,6 +9,12 @@ Use this skill when designing security systems, auditing existing code for vulne
 
 **The client is compromised. Always.** Exploiters run arbitrary Luau on the client via injection tools. Every LocalScript, every ReplicatedStorage module, and every client-side value is readable and writable by attackers. The server is the source of truth, but the implementation depends on the authority model.
 
+## Threat-model each feature
+
+Before implementation, apply the official [security-by-design questions](https://create.roblox.com/docs/scripting/security/security-tactics): what can a client with arbitrary arguments and local state make this feature do? What happens under sustained spam, and what is the maximum legitimate rate? Can it harm another player, consume unbounded server work, or expose unnecessary internal state?
+
+Operator workflow: identify the authoritative owner, bound request size and work **before** expensive operations, check permissions against server state, and exercise malformed, repeated, and concurrent requests. A generic remote validator does not prove that an individual action is authorized. Use `roblox-networking` for boundary mechanics.
+
 ## Authority Models
 
 ### Classic replication
@@ -97,7 +103,7 @@ For the rate limiter and argument validation implementations, see `roblox-networ
 | Malformed string | Invalid UTF-8 bytes pass type checks but fail serialization | `utf8.len(value)` must return a count before persisting client strings |
 | NaN rollback | NaN smuggled through settings remotes breaks serializers or comparisons, rolling back saves | Reject `x ~= x` and infinities wherever client numbers enter persisted state |
 
-Practitioner lead: TheGreatSageEqualToHeaven's "Data store vulnerabilities" gist documents these rollback vectors found in major titles. Treat as community research, not official documentation.
+Practitioner lead: a public gist documents these rollback vectors found in major titles. Treat as community research, not official documentation.
 
 ## Security Audit Checklist
 
@@ -309,3 +315,9 @@ Reviewed against the [Script capabilities](https://create.roblox.com/docs/script
 - Threat history: [Exploiting Explained](https://devforum.roblox.com/t/exploiting-explained/170977) (2.9k likes; executor timeline doc); [2025 mass hacking operation PSA](https://devforum.roblox.com/t/psa-to-all-roblox-developers-massive-hacking-operation-taking-over-massive-front-page-games/3913726); [Delta Executor detection](https://devforum.roblox.com/t/instant-detection-of-delta-executor-patched/3971400) (note: patched = fingerprint rotates).
 - Backdoors: [remove backdoors](https://devforum.roblox.com/t/how-to-remove-backdoors-from-your-game/511548); [malicious scripts/plugins clearing](https://devforum.roblox.com/t/clearing-your-game-of-malicious-scripts-plugins-and-backdoors/511830).
 - Posture: [How you should secure your game](https://devforum.roblox.com/t/how-you-should-secure-your-game-a-beginner-guide-for-secure-networking-and-developing-anticheats/351775); [Client anti-cheats aren't as bad as you think](https://devforum.roblox.com/t/client-anti-cheats-arent-as-bad-as-you-think/2471974) (detector-not-punisher framing).
+
+## Validate the completion promised by a referral reward
+
+When a reward is for a successful referral, closing an invite prompt is not proof of that referral. `SocialService.GameInvitePromptClosed` reports prompt closure. Use the invited player's server-observed join and the documented `Player:GetJoinData()` referral information, including `ReferredByPlayerId` when present, then validate the reward's eligibility and apply it idempotently through the authoritative grant owner.
+
+Treat supplied launch data as context, not a currency or entitlement claim. Test cancelled prompts, no resulting join, repeated notifications, duplicate joins, and ineligible/self claims. Verify the particular API and current policy separately for any different external action; an invite flow does not establish how a like, favorite, or group reward should be confirmed.

@@ -1,10 +1,14 @@
 ---
 name: roblox-physics
-description: "Use when building Roblox vehicles, ragdolls, projectiles, elevators, constraints, forces, or other physics-driven gameplay."
-last_reviewed: 2026-10-02
+description: "Use when building or fixing Roblox physics: vehicles, ragdolls, projectiles, elevators, constraints, forces, network ownership."
+when_to_use: "Also when parts fling, jitter, fall through floors or desync, and when tuning projectile or knockback feel."
+last_reviewed: 2026-10-14
 sources:
   - https://devforum.roblox.com/t/cframe-operations-for-the-rest-of-us/3546477
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/physics/mechanical-constraints.md
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/Humanoid.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/WorldRoot.yaml
 ---
 
 # Roblox Physics
@@ -27,7 +31,7 @@ Constraints connect via `Attachment` objects. Create one on each part, set `Atta
 Vehicles: use motorized `HingeConstraint` wheels, `SpringConstraint` suspension, servo steering, and `CustomPhysicalProperties` for friction tuning.
 
 ### Ragdoll
-Replace Motor6Ds with `BallSocketConstraint`: create Attachments from motor.C0/C1, set `LimitsEnabled=true`, `UpperAngle=45`. Keep Root Motor6D for HRP. Set humanoid state to `Physics`. On recovery, destroy only the instances ragdoll created and restore only the motors it disabled (track both at enable time).
+Track the joints and instances each ragdoll changes; recover only owned state, and coordinate overlapping effects before restoring movement. `BallSocketConstraint` recipe: full.md.
 
 ### Authority and Network Ownership
 Classic projects: automatic ownership can give an unanchored assembly to a nearby player. `SetNetworkOwner(nil)` keeps it server-owned; `SetNetworkOwner(player)` gives a player simulation ownership. Treat player-owned physics as untrusted and validate gameplay outcomes.
@@ -41,5 +45,5 @@ Server Authority: set `Workspace.AuthorityMode = Server` with its required setti
 - Both Attachment0 AND Attachment1 required (missing one = silent fail)
 - Over-constraining = jitter. Tune mass with `CustomPhysicalProperties`
 - Use Raycast for hitscan, `Touched` only for slow physics projectiles
-- Always set lifetime on physics projectiles (forgotten ones kill perf)
-**Need more detail?** Load `references/full.md` for the complete reference with code examples, API tables, and edge cases.
+- Always set a lifetime on physics projectiles
+See `references/full.md` for recipes, API details, and checks.

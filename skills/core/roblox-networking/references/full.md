@@ -292,6 +292,20 @@ Effects:FireAllClients("MuzzleFlash", muzzlePosition, direction)
 
 For typed wrappers, `RbxUtil` exposes `TypedRemote` and `Comm`. They can improve discoverability and middleware structure, but they do not validate attacker-controlled values for you. Keep the server contract and validation visible at the handler boundary.
 
+## 6a. Same-side bindable boundaries
+
+`BindableEvent`/`BindableFunction` never cross the client-server boundary — they connect scripts on the same side. Their argument rules mirror remotes and break code the same way:
+
+- Tables are copied, not referenced: the receiver gets a new table, so identity checks fail and mutations don't propagate back.
+- Metatables are stripped in transit; non-string keys can be mangled. Re-attach behavior after delivery, or pass a plain id and look the object up on the receiving side.
+
+Semantics:
+
+- `BindableEvent:Fire()` does not yield; each connected listener runs in its own thread. A listener erroring or yielding neither breaks nor blocks the firer, and listener completion order is not guaranteed.
+- `BindableFunction:Invoke()` yields the caller until `OnInvoke` returns, exactly like `RemoteFunction`. Assign `OnInvoke` once — with multiple assignments only the last one executes.
+
+Use bindables to decouple same-side modules (server-to-server signals, client-to-client UI events). They are not a "safe remote": anything crossing clients must still go through a `RemoteEvent` with full validation.
+
 ## 7. Measure packet budgets
 
 Track both payload size and frequency. A small payload fired every frame can be worse than a larger
@@ -384,6 +398,23 @@ criteria, not fashion:
   clients (version the wire, not just the module); generators that re-order struct fields change the
   binary layout (regenerate both sides atomically); and per-VM codegen output must not be hand-edited,
   which is exactly what the CI regen gate above exists to catch.
+
+## 7e. Platform ceiling vs application rate limits
+
+The engine's own transport ceiling is not your rate limit. [RemoteEvent](https://create.roblox.com/docs/reference/engine/classes/RemoteEvent) and `UnreliableRemoteEvent` each document
+**approximately 500 requests per second, per client**, with the pool **shared
+among all remote events of the same type**, so a burst across many remotes is what trips it, not one
+hot remote. Reliable events can buffer when no listener is attached; unreliable events may be dropped. Do not confuse missing-listener diagnostics with proof of a throttle.
+
+Operator guidance: treat this approximate transport ceiling as a limit to stay well below, not a target:
+
+- Keep your application budget an order of magnitude below it — the §4 per-player throttle intervals
+  (≥ 0.2 s per action) already cap a single remote around 5 req/s, and a client's *total* FireServer
+  rate across all remotes should stay well under tens per second.
+- Reserve headroom for bursts: UI spam, death loops, and auto-fire exploits all draw from the same
+  shared pool; your throttling should reject the request before the engine drops it silently.
+- Server→client sends (`FireClient`/`FireAllClients`) are not documented against this per-client
+  client→server limit; their cost is measured as bandwidth budget (§7a), not invocation rate.
 
 ## 8. Movement and physics checks
 
@@ -543,3 +574,9 @@ Top-sorted DevForum canon for networking libraries. Verify status in-thread; sev
 - Remote tooling: [Packet](https://devforum.roblox.com/t/packet-networking-library/3573907) (2025), [Warp](https://devforum.roblox.com/t/warp-very-fast-powerful-networking-library/2779813) (2024), [BridgeNet](https://devforum.roblox.com/t/bridgenet-insanely-optimized-easy-to-use-networking-library-full-of-utilities-now-with-roblox-ts-v199-beta/1909935) (legacy).
 - Case study: [60x bandwidth reduction in Astro Force](https://devforum.roblox.com/t/how-we-reduced-bandwidth-usage-by-60x-in-astro-force-roblox-rts/1202300), the practical RTS-scale optimization write-up.
 - [StreamX is DEPRECATED](https://devforum.roblox.com/t/deprecated-streamx-reduce-lag-and-prevent-map-cloning/1992484): do not recommend; example of a once-canonical library that died.
+
+## Resolve accepted combat outcomes before consequences
+
+Resolve target eligibility and damage interception in the authoritative combat owner before sending death presentation, granting hit rewards, or applying attacker penalties. Return an explicit rejected, survived, or eliminated outcome as appropriate to the game's rules. A raycast or physics contact is only a candidate hit; a shield or remaining life can turn an accepted contact into a survived outcome.
+
+Test invalid targets, protected targets, nonlethal accepted hits, and final hits through both human and bot attack paths. Observe the victim's own client and the attacker's consequences. A surviving player must not receive a lethal camera/control path, and a rejected contact must not apply a penalty meant for a valid hit.

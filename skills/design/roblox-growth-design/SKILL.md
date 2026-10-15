@@ -1,7 +1,8 @@
 ---
 name: roblox-growth-design
-description: "Use for growth diagnosis, discovery, retention, onboarding, experiments, LiveOps, and packaging."
-last_reviewed: 2026-09-22
+description: "Use for Roblox growth: diagnosing stats, discovery, retention, onboarding, experiments, LiveOps, thumbnails, and packaging."
+when_to_use: "Also when CCU, D1/D7, playtime or Home recommendations are low, planning an update or A/B test, reading the Creator Dashboard, and auditing why a game isn't growing."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/discovery
   - https://create.roblox.com/docs/production/game-design/analytics-essentials
@@ -25,6 +26,8 @@ sources:
   - https://devforum.roblox.com/t/boost-your-discovery-by-building-games-people-want-to-play/4779042
   - https://qptr.io
   - https://creatorexchange.io
+  - https://www.copyright.gov/title17/92chap2.html
+  - https://copyright.gov/circs/circ30.pdf
   - original
 ---
 
@@ -54,7 +57,7 @@ Load for growth, discovery, retention, onboarding, packaging, or LiveOps; route 
 - Low conversion/ARPPU: product fit, value communication, friction, catalog depth, or concentration.
 - Low 7-day spend days / play days per user: consumables, purchase pathways, or event cadence.
 
-These are hypotheses, not one-to-one causes. Segment and test. Per-stat tactics in full.md §3–§6.
+These are hypotheses, not one-to-one causes. Segment and test. D1 can move without a release as acquisition mix or social density changes (§3). Per-stat tactics in full.md §3–§6.
 
 ### Algorithm hotspots (2026)
 

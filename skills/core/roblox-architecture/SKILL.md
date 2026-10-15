@@ -1,7 +1,8 @@
 ---
 name: roblox-architecture
-description: "Use when assigning Roblox feature ownership, code location, dependencies, startup, or client-server boundaries without imposing a framework."
-last_reviewed: 2026-10-02
+description: "Use when adding, moving, refactoring, or reviewing Roblox feature ownership, code layout, dependencies, startup, or client-server boundaries."
+when_to_use: "Also when deciding where code goes, splitting a large script, fixing load-order or require cycles, untangling services/controllers, or auditing project structure."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/projects/data-model
   - https://create.roblox.com/docs/projects/client-server
@@ -16,9 +17,11 @@ sources:
 
 ## When to Load
 
-Load for ownership, client-server boundaries, startup, or module splits. Do not add a framework without evidence.
+Load for ownership, integration, boundaries, startup, or module splits.
 
 ## Quick Reference
+
+Reuse proven project modules before rebuilding; inspect contracts and failure/cleanup paths. Integration workflow: full.md.
 
 ### Start from one owner
 
@@ -56,4 +59,4 @@ An ECS earns its cost only when many similar entities update every frame by orde
 
 One canonical owner per mutation, no hidden startup yield or replicated trust decision, explicit cleanup, smallest traceable structure. Tags are discovery, attributes configuration, one owner for attach/remove cleanup.
 
-> Detailed layouts, dependency rules, and startup examples: [references/full.md](references/full.md)
+> Details: [references/full.md](references/full.md)

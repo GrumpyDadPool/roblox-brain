@@ -59,9 +59,10 @@ If a capability is unavailable, switch to the offline Luau path and identify the
 6. **Mesh:** use `generate_mesh` for a custom textured prop. Bound the size and triangle budget; do not treat the returned mesh as accepted until inspected.
 7. **Material:** use `generate_material`, then apply and verify its returned base material and material-variant name on target parts.
 8. **Image:** use `store_image` for permitted local PNG/JPG references or `upload_image` for a permitted source accepted by the live schema. Never upload external content without permission.
-9. **Wait:** if a generation returns a job ID, call `wait_job_finished` with its `generationId` before dependent edits. Follow the live tool schema because some generation tools complete or insert automatically.
-10. **Place:** parent the result under the named build root, set pivot/transform, and read back class, descendants, bounds, materials, collision, anchoring, and asset provenance.
-11. **Fallback:** use native Parts, CSG, primitives, and coherent materials when reuse or generation is unavailable, slow, rejected, or visually unsuitable.
+9. **Asset privacy (diagnosis before repair):** if an inserted or referenced image, decal, or mesh renders blank/invisible or the Output shows an asset-permission error, check the documented [asset privacy system](https://create.roblox.com/docs/projects/assets/privacy), before assuming file corruption. Owners can opt into creating Images/Decals/Meshes as **Restricted**; a game without a needed permission cannot load them, and the Output error is clickable and names the asset. Diagnose in this order: read the exact Output error → check the asset's privacy state in Creator Dashboard (Configure → Permissions) → grant the **experience** (universe ID) permission — collaborator sharing alone is not enough for runtime. Remember: insertion into a place auto-grants that experience permission and the grant is irreversible, Open Use is irreversible, and a `Decal`'s state is tied to its `Image` dependency (a restricted child inside a loaded model can still be the missing piece). See `roblox-studio-mcp` "Private-asset permission diagnosis."
+10. **Wait:** if a generation returns a job ID, call `wait_job_finished` with its `generationId` before dependent edits. Follow the live tool schema because some generation tools complete or insert automatically.
+11. **Place:** parent the result under the named build root, set pivot/transform, and read back class, descendants, bounds, materials, collision, anchoring, and asset provenance.
+12. **Fallback:** use native Parts, CSG, primitives, and coherent materials when reuse or generation is unavailable, slow, rejected, or visually unsuitable.
 
 Generated assets are candidates. Structural and visual review are still required.
 
@@ -436,3 +437,14 @@ Server scripts can also create and configure prompts programmatically; `TriggerE
 - [Large-Scale Roblox Terrain: the ultimate guide](https://devforum.roblox.com/t/large-scale-roblox-terrain-the-ultimate-guide/405672) (84k views): still the terrain-at-scale reference.
 - [Realistic oceans via mesh deformation](https://devforum.roblox.com/t/realistic-oceans-using-mesh-deformation/1159345); [greedy meshing explainer](https://devforum.roblox.com/t/consume-everything-how-greedy-meshing-works/452717).
 - [Free texture sites](https://devforum.roblox.com/t/free-texture-sites/70131) (174k views); [City Loader plugin](https://devforum.roblox.com/t/city-loader-plugin-templates-for-real-life-buildingscities-in-studio/696886).
+
+## Generated-map and interaction regression checks
+
+- After a representative room or map is approved, record its reusable dimensions, materials, prop sourcing, lighting, traversal and validation choices before building siblings. Keep the approved reference intact unless its changes are requested.
+- After resizing or changing layout dimensions, revalidate dependent walls, floors, foundations, openings, fences, prop offsets, spawns, and activity zones. Inspect joins and exterior boundaries from player height as well as overview cameras; fix the generator when generated geometry is wrong.
+- Scan for unintended coincident faces and overlapping trim across the complete generated scene, then inspect corners, door lintels, floor/ceiling seams and junctions in motion. An automated overlap report is a candidate list, not proof that the scene is free of flicker or gaps.
+- Traverse doorways, ladders, hatches, landings, and return routes with representative supported avatars in the installed geometry. Check entry, body clearance, and stepping off both ends. Treat nominal dimensions as planning estimates, not traversal proof.
+- Compare maps with the same definition of accessible floor, obstacle clearance, ceiling height, connectivity, and camera conditions. Inspect the extraction method before comparing results. Outer bounding boxes and similar area do not establish similar playable space or spaciousness.
+- Match an activity's eligibility zone to the visible area players understand as part of it, including where its interaction can actually activate. Exercise all edges; define separate entry/exit thresholds where jitter would repeatedly revoke equipment or reset progress. Record exit causes separately.
+- Before reusing a cloned prop, inspect its tags, attributes, prompts, scripts, references, and descendants. Confirm only the intended discovery systems attach behavior; appearance alone does not establish a clean clone.
+- Derive rebuild bounds from canonical geometry, excluding earlier generated barriers, helpers, and validation zones. Run the generator twice on a temporary copy and compare instance counts, dimensions and behavior; repeated regeneration must not expand its own input bounds.

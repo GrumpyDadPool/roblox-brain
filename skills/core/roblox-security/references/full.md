@@ -103,7 +103,7 @@ For the rate limiter and argument validation implementations, see `roblox-networ
 | Malformed string | Invalid UTF-8 bytes pass type checks but fail serialization | `utf8.len(value)` must return a count before persisting client strings |
 | NaN rollback | NaN smuggled through settings remotes breaks serializers or comparisons, rolling back saves | Reject `x ~= x` and infinities wherever client numbers enter persisted state |
 
-Practitioner lead: TheGreatSageEqualToHeaven's "Data store vulnerabilities" gist documents these rollback vectors found in major titles. Treat as community research, not official documentation.
+Practitioner lead: a public gist documents these rollback vectors found in major titles. Treat as community research, not official documentation.
 
 ## Security Audit Checklist
 

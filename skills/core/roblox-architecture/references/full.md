@@ -309,13 +309,13 @@ Never adopt a server-issued entity id directly as the client's id — client and
 
 Systems written as plain functions taking `(world, services)` — dependencies passed in, not reached through globals — run under a plain Luau CLI or Lune with faked inputs, without Studio. That is the same "pure core, testable without Roblox wiring" rule §9 uses for module splits, instantiated at the data layer. Keep engine-facing bits (instance spawning, replication send) at the edges of the system call so the simulation core stays headless-runnable.
 
-## Community field notes (Tizzy discord, Jul–Sep 2026)
+## Field-reported patterns
 
-Practitioner reports from a live dev Discord; repeated field observations, not doc-verified claims. <!-- temporal: 2026-09 -->
+Repeated observations from working Roblox developers: useful starting points, not doc-verified claims. <!-- temporal: 2026-09 -->
 
-- **Module-loader race pattern:** race conditions from dependency chains ("require this → require that" dominoes) cause playtests that only work after 2–3 restarts. Fix pattern: server services and client controllers don't depend on each other until their `.Init()` is called; a module loader requires all modules, then initializes all (optionally `task.spawn` per init for parallel init). Also makes the codebase far easier for AI agents to work with. Attribution: BuilderbeastYT/Ibra 2026-07-29; RBobloxian5542 2026-08-07
-- **BigNum handling for simulators:** `IntValue` breaks past ~10 quadrillion; `NumberValue` extends only to ~9.22e18; the standard fix is coefficient + exponent pairs (a BigNum-style library, e.g. the "infinitemath" module). Attribution: GameForgeX; renik01; adhx5; Skardoll; Davide, 2026-07-06
-- Max server size is 200 players; a "10k player server" is 10k spread across 200-slot servers. Attribution: thug, 2026-08-22
+- **Module-loader race pattern:** race conditions from dependency chains ("require this → require that" dominoes) cause playtests that only work after 2–3 restarts. Fix pattern: server services and client controllers don't depend on each other until their `.Init()` is called; a module loader requires all modules, then initializes all (optionally `task.spawn` per init for parallel init). Also makes the codebase far easier for AI agents to work with.
+- **BigNum handling for simulators:** `IntValue` breaks past ~10 quadrillion; `NumberValue` extends only to ~9.22e18; the standard fix is coefficient + exponent pairs (a BigNum-style library, e.g. the "infinitemath" module).
+- Max server size is 200 players; a "10k player server" is 10k spread across 200-slot servers.
 
 ## Presentation and round-lifecycle contracts
 

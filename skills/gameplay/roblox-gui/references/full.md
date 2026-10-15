@@ -297,6 +297,21 @@ For larger menus, group related controls and define explicit directional behavio
 
 React Luau is another optional reference for state-driven, declarative UI. Do not introduce it into a small native UI merely to avoid writing a few render functions.
 
+### Focus ownership
+
+Most controller bugs are focus bugs, not missing bindings. Give every view one owner of `GuiService.SelectedObject` and apply these rules:
+
+- **Entry:** when a view opens on gamepad, select a control that is visible in the *current* sub-view, such as the active tab's first actionable item, not a fixed "Claim" or "Buy" button that a tab switch may have hidden. Re-check after every tab switch, page change and list rebuild.
+- **Boundary:** set `SelectionGroup = true` on a window's root and `SelectionBehaviorUp/Down/Left/Right = Enum.SelectionBehavior.Stop` on the edges where focus must not escape. With the default `Escape`, directional navigation can leave the window and land on HUD buttons behind it.
+- **Rebuilt lists:** when a list is destroyed and recreated (equip, purchase, favorite, filter), remember the selected item's id first. Afterwards, select the matching new row, or a visible fallback, and keep the scroll position. Otherwise the action the player just pressed throws their focus away.
+- **Back:** B/Circle unwinds one layer at a time: an inner overlay or picker closes before its window, and the window closes before gameplay. Non-modal panels that take input (results, spectate controls, offers) need their own Back route too.
+- **Exit:** on close, restore the control that opened the view if it still exists and is visible, otherwise clear the selection. When the player switches away from gamepad (`PreferredInput` changes), clear stale game selection.
+- **No stealing:** automatic panels (offers, notifications, spectate target changes) must not move focus while another view owns it.
+- **Stray selection blocks gameplay:** while `SelectedObject` is set, gamepad buttons drive UI navigation and activation. A selection left on a HUD button after a menu closes can swallow the attack or jump press. Clear it when gameplay resumes (round start, menu close), and include "is a GUI selected?" in the gameplay input gate (`roblox-input`).
+- **Third-party top-bar libraries** can bind global gamepad keys. One popular top-bar library binds D-pad Up to select its icons, which pulls focus out of any open window. Check the library's settings for its controller bindings, and keep D-pad Up inside your windows.
+
+Make the main destinations reachable in a few presses. Console navigation is sequential, so add shortcuts for key actions (for example, a bumper that opens the main menu) instead of making players traverse the whole HUD.
+
 ## 9. Animation and cleanup
 
 Tween a small set of properties and cancel or replace the previous tween when state changes. Keep connections and tweens owned by the screen or row they affect. Destroy temporary UI when the owning feature closes.
@@ -389,24 +404,130 @@ A practical UI flow is:
 
 Do not close a purchase dialog merely because a prompt was opened. Wait for the purchase or server result, and handle cancellation.
 
-## 11. Safe areas and cross-device review
+## 11. Mobile-first layout and cross-device review
 
-Do not choose `ScreenGui.ScreenInsets`, `IgnoreGuiInset`, or `ClipToDeviceSafeArea` from a single Studio viewport. `Enum.ScreenInsets.CoreUISafeInsets` is one option, not a universal default. Test the actual target combinations and record which elements intentionally sit under or outside Roblox core UI.
+Roblox's mobile input guide states that the majority of Roblox sessions are played on mobile devices. Design every screen for a small landscape phone first, then let it grow for tablet, desktop and TV. A layout designed at 1080p and shrunk to a phone ends up with tap targets and text too small to use. A phone layout that grows still works.
 
-Test at minimum:
+### 11.1 Design order
 
-- narrow phone portrait;
-- wide phone or tablet landscape;
-- desktop mouse/keyboard;
-- gamepad navigation;
-- console safe-area and top-bar behavior;
-- mobile cutout/notch and on-screen keyboard behavior;
-- a long localized string;
-- a missing or delayed asset;
-- respawn and UI reopening;
-- low frame rate while a list is updating.
+1. **Smallest supported landscape phone** (iPhone SE/7 class, about 667×375 points), with the touch controls showing.
+2. **Common phones** (about 780–850 × 360–390, for example mid-range Android and current iPhones). Notches and home-bar insets live here.
+3. **Tablet** (1024×768 and 960×600 class). Check that the layout grows instead of stretching.
+4. **Desktop** with mouse and keyboard.
+5. **Console/TV** with a controller at 1080p and 4K (§11.7).
 
-A layout that looks correct at one Studio viewport size is not finished. Capture the intended states and compare them after changing the viewport and preferred input.
+Fix each layout before moving to the next. A fix made for one size can break a smaller one, so re-check the phone after every change.
+
+### 11.2 What Roblox already occupies
+
+Your UI shares the screen with engine UI. Reserve it explicitly rather than guessing:
+
+| Region | Owner | How to read it |
+|---|---|---|
+| Top bar | Roblox menu, chat and backpack buttons | `GuiService:GetGuiInset()` for the inset; `GuiService.TopbarInset` (a `Rect`) for the free strip beside Roblox's buttons. It changes at runtime, so listen with `GetPropertyChangedSignal("TopbarInset")`. |
+| Device cutouts | Notch, camera hole, rounded corners | `ScreenGui.ScreenInsets` (§11.3) |
+| Movement zone | Thumbstick (the dynamic thumbstick accepts touches across a large part of the left side) | Treat the lower-left area as reserved; no buttons there |
+| Jump button | Bottom-right | Measure it from `PlayerGui.TouchGui` when present (see `roblox-input`), not a hardcoded offset |
+| Chat window and player list | Upper-left and upper-right on desktop | Leave room for them, or move your HUD when they are open |
+
+Anything else you add to the lower-right competes with the jump button and with camera drags, which players do with their right thumb.
+
+### 11.3 Safe-area containers
+
+`Enum.ScreenInsets` per `ScreenGui`:
+
+- `CoreUISafeInsets`: avoids device cutouts **and** Roblox core UI. The docs recommend it for interactive and important UI (buttons, status).
+- `DeviceSafeInsets`: avoids cutouts only. Use it when you deliberately place content beside the top-bar buttons.
+- `TopbarSafeInsets`: the free strip in the top bar. Use it for top-bar entries.
+- `None`: the full screen. Use it only for non-interactive content such as backgrounds, vignettes and screen flashes.
+
+`ScreenGui.ClipToDeviceSafeArea` defaults to `true`, which clips descendants at the safe area. `ScreenGui.SafeAreaCompatibility` defaults to `FullscreenExtension`; the docs recommend choosing `ScreenInsets` per container instead for new work. `GetGuiInset()` offsets apply only to ScreenGuis with `IgnoreGuiInset = false`. When you compare positions across ScreenGuis with different `IgnoreGuiInset` values, convert to one coordinate space first.
+
+### 11.4 Place by measurement, not by offset
+
+On a crowded phone, a fixed offset that clears its neighbour at one size overlaps it at another. Read the neighbour's real bounds (`AbsolutePosition` and `AbsoluteSize`) and position against them. Re-run the placement while the element is visible: the neighbours move with screen size, input mode and game state.
+
+```luau
+local GuiService = game:GetService("GuiService")
+
+-- Screen-space top edge of a GuiObject, whatever its ScreenGui's IgnoreGuiInset.
+local function screenTop(object: GuiObject): number
+	local screen = object:FindFirstAncestorWhichIsA("ScreenGui")
+	local offset = if screen and not screen.IgnoreGuiInset then GuiService:GetGuiInset().Y else 0
+	return object.AbsolutePosition.Y + offset
+end
+
+-- Keep `element` (bottom-anchored, AnchorPoint.Y = 1) at least `gap` pixels above `below`.
+local function keepAbove(element: GuiObject, home: UDim2, below: GuiObject, gap: number)
+	local screen = element:FindFirstAncestorWhichIsA("ScreenGui")
+	if not screen or not below.Visible then
+		element.Position = home
+		return
+	end
+	local origin = if screen.IgnoreGuiInset then 0 else GuiService:GetGuiInset().Y
+	local limit = screenTop(below) - origin - gap
+	local homeBottom = screen.AbsoluteSize.Y * home.Y.Scale + home.Y.Offset
+	if homeBottom > limit then
+		element.Position = UDim2.new(home.X, UDim.new(0, math.floor(limit)))
+	else
+		element.Position = home
+	end
+end
+```
+
+The same idea works sideways. When a bottom bar and a corner control would meet on a narrow screen, slide the bar toward the free side by exactly the overlap (bounded so it never enters the thumbstick zone), rather than shrinking everything.
+
+### 11.5 Overlap comes from state combinations
+
+Screens rarely overlap in their default state. They overlap when a new feature shows two elements together for the first time: a held weapon's touch button plus the out-of-round menu, a spectate bar plus the hotbar, a toast plus a timer warning. For each feature:
+
+- List the HUD states it can appear in (lobby, alive in a round, eliminated, spectating, results, a window open) and which elements show in each.
+- Check every pair that can be visible at the same moment, on the smallest phone with touch controls showing.
+- After adding a state, re-run the device matrix (§11.8) for the states it touches, not just the screen you edited.
+
+### 11.6 Windows, text and touch targets on small screens
+
+- **Fit windows to the usable area:** the viewport minus the top inset and any reserved columns, not the whole screen.
+- **Measure rendered sizes:** a single scale-to-fit factor shrinks every target and font together. A 900×580 window fitted to an 844×390 phone renders at roughly 0.6×, so a 58-pixel close button becomes about 34 pixels and 18-pixel text about 11. Check `AbsoluteSize` and the rendered text size at the smallest supported screen, not the authored values.
+- **Reflow instead of shrinking:** when the scaled result is too small, use fewer grid columns, move a side preview into a detail view, stack tabs horizontally, scroll a `ScrollingFrame`, or put rarely used options one level deeper (progressive disclosure). Shrink decoration before you shrink tap targets.
+- **Size text from real measurements:** use `TextService:GetTextBoundsAsync` with `GetTextBoundsParams.Font` set to the label's `FontFace`; the legacy `GetTextSize` takes a `Font` enum and can mis-size `FontFace` text. Leave room for `UIStroke`. Wrap to a second line rather than truncating or `TextScaled` shrinking.
+- **`CanvasGroup` clips its descendants** to its bounds. An outline or shadow drawn outside the group's box is cut off, so inset the content inside the group.
+- **Preload images through instances:** `ContentProvider:PreloadAsync` documents its list as instances to load. Pass image-bearing instances (for example `ImageLabel`s holding the ids), then check each asset's `Enum.AssetFetchStatus` in the callback. A failed or moderated image silently renders as nothing.
+
+### 11.7 Console and TV
+
+From Roblox's console guidelines and the `GuiService` reference:
+
+- **Design for 8–10 feet away:** develop for lower resolutions first, scale with relative sizes and `UISizeConstraint`, and use `GuiService.ViewportDisplaySize == Enum.DisplaySize.Large` (most TVs) to decide when to scale text and targets up.
+- **Keep content in the TV-safe area:** some TVs crop the edges, so inset interactive and important UI from every edge. Pick a margin and verify it on an actual TV.
+- **Don't use `GuiService:IsTenFootInterface()` to detect a console.** It is deprecated and hardcoded to `true` on consoles regardless of how the player is interacting. Use `ViewportDisplaySize` for layout and `UserInputService.PreferredInput` for controls.
+- **Disable the chat window** for console games.
+- **Navigation:** every element must be reachable with the four directions plus select and back. Key actions should take only a few presses. Use progressive disclosure: go in and out of screens rather than fitting everything on one.
+- **Button prompts must match the controller:** see `roblox-input` for `GetStringForKeyCode`, `GetImageForKeyCode` and `InputActionLabel`.
+- **Accessibility:** respect `GuiService.PreferredTextSize` and `GuiService.ReducedMotionEnabled`.
+- **Content maturity:** console releases need content maturity information.
+
+### 11.8 Cross-device verification
+
+Studio's **Device Simulator** switches the screen, platform and hardware your experience believes it's running on. Phone, tablet and console presets apply real safe areas and pixel densities, and the setting can change mid-playtest. **Controller Emulator** (Emulation tab) supplies Xbox and PlayStation gamepads, which you can connect and disconnect mid-session. Selecting a console device switches Controller Emulator to a matching controller.
+
+A practical matrix for every UI change:
+
+- smallest supported phone (667×375 class) with touch controls;
+- a mid-range Android phone (about 780×360) and a current iPhone (about 844×390);
+- a tablet (1024×768 or 960×600);
+- desktop 1920×1080 with mouse;
+- console at 1080p and 4K with an Xbox controller, then a PlayStation controller.
+
+Practical notes:
+
+- **Prefer device presets to raw resolution overrides.** Confirm `UserInputService.PreferredInput` is `Touch` before judging a touch layout: touch-only controls hide when the session believes a mouse is in use.
+- **Measure, then look.** Read the `AbsolutePosition`/`AbsoluteSize` of the elements that could collide, then take screenshots to judge readability.
+- **Test the states, not just the screen** (§11.5): open a window, get eliminated, spectate, show two toasts, open chat, and focus a text box so the on-screen keyboard is up.
+- **Test phones at Entry-level pixel density,** and use the simulator's physical-size mode to judge tap targets.
+- **Check what the simulator can't fake:** a real phone (thumb reach, the notch) and a real TV (overscan, sofa distance) before calling a release device-tested.
+
+Also test: a long localized string, a missing or delayed asset, respawn and reopening, and low frame rate while a list updates. A layout that looks right at one Studio viewport is not finished.
 
 ## Custom loading flow
 
@@ -423,7 +544,10 @@ A layout that looks correct at one Studio viewport size is not finished. Capture
 - [ ] Buttons expose disabled and busy states.
 - [ ] UI actions are safe to repeat or are debounced.
 - [ ] Server responses, not local optimism, determine durable state.
+- [ ] Designed on the smallest supported landscape phone first; checked on the device matrix (§11.8) in every state the change touches.
+- [ ] Interactive UI sits in `CoreUISafeInsets` (or a deliberate alternative) and clears the thumbstick zone, jump button and top bar by measurement.
 - [ ] The interface works with touch, mouse, keyboard, and gamepad where relevant.
+- [ ] Gamepad: visible entry focus, a selection boundary, layered Back, and focus restored after rebuilds and on close.
 - [ ] All temporary connections, tweens, and rows have an owner lifetime.
 
 ## Existing style and visual verification
@@ -519,3 +643,11 @@ if not video.IsLoaded then
 end
 video:Play()
 ```
+
+## UI state ownership and exposure
+
+- Route automatic opens, world-triggered opens, and manual buttons through the same window controller. Verify open state, close/back handlers, modal input, and focus on every entry path, including after rejoin and during round transitions.
+- When temporarily hiding UI, record each affected element's prior state and restore only state still owned by that temporary mode. Do not re-enable every touched screen. Test completion, cancellation, respawn, and overlap with another mode so stale snapshots cannot reopen closed menus or hide a newer screen.
+- For timed teaching, define when the instruction counts as exposed. Accrue time only while its intended presentation is actually available; pause or cancel deliberately behind menus, death screens, or other hiding states. Test hide/resume and verify the player receives the intended visible duration.
+- Separate structural placement from active-input affordances. Update buttons, reticles, and hints for the current input without making navigation jump between opposite screen edges on hybrid input changes. Test input switching, controller connection, viewport changes, and an already-open window independently.
+- Coalesce repeated updates for one countdown or event into an owned presentation rather than spawning a new toast for every tick. Bound simultaneous notices and verify a new urgent message remains readable while an existing countdown updates. Choose presentation density for the actual gameplay phase.

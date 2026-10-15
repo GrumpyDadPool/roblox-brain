@@ -1,11 +1,14 @@
 ---
 name: roblox-camera
-description: "Use when scripting Roblox camera behavior, CFrame placement, screen raycasts, first or third-person views, or cutscenes."
-last_reviewed: 2026-06-29
+description: "Use when scripting or fixing Roblox camera behavior: CFrame placement, screen raycasts, first/third-person, shoulder views, cutscenes."
+when_to_use: "Also when the camera clips through walls, jitters, aims wrong on touch or gamepad, or needs a death cam or spectate view."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/Camera
   - https://create.roblox.com/docs/reference/engine/enums/CameraType
   - https://create.roblox.com/docs/reference/engine/datatypes/CFrame
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/WorldRoot.yaml
 ---
 
 # Roblox Camera
@@ -51,8 +54,6 @@ end)
 - `PreRender` for camera (visual sync). `Heartbeat` adds 1-frame lag. `RenderStepped` still works but is superseded by `PreRender`.
 - `Camera.CFrame` lacks VR head rotation; use `GetRenderCFrame()` for the true view.
 - `SetRoll` is outdated; apply roll via `CFrame.Angles(0, 0, roll)` on CFrame.
-- `CameraSubject = nil` reverts to previous.
 - `CFrame.new(pos, lookAt)` is legacy (back-compat only); use `CFrame.lookAt(at, lookAt)` for new code.
-- `ScreenPointToRay` ≠ `ViewportPointToRay` (GUI inset). Use `ScreenPointToRay` for mouse input.
 
 See `references/full.md` for first/third-person recipes, cutscenes, screen shake, mouse-look, full API.

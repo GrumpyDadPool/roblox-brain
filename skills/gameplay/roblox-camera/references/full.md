@@ -482,3 +482,10 @@ For non-Play testing (Edit mode), `CurrentCamera` exists but the perspective doe
 - **Modifying the local head in first-person without `LocalTransparencyModifier`.** Players see their own head blocking the view. Use `LocalTransparencyModifier = 1`, not `Transparency` (Transparency replicates).
 - **Setting `Humanoid.JumpPower = 0` to disable jump in a cutscene.** Remember to restore it. Or use `Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)`.
 - **Trying to set Camera.CFrame every frame without clearing the render connection on player respawn.** Stale references after respawn. Reconnect in `CharacterAdded`.
+
+## Temporary camera ownership and collision checks
+
+- Coordinate temporary views through one camera owner or explicit ownership tokens. Release on timeout, cancellation, subject removal, character replacement, round transition, and feature teardown. Restore the current character/controller when required; do not replay a snapshot captured before a newer camera mode or respawn.
+- Test eliminated players who already respawned in the lobby separately from round survivors. Exercise a menu or spectate view opened during a death view, then close it after respawn. Confirm camera subject, controls, and zoom belong to the current character.
+- Let collision clearance override a preferred minimum camera distance. Do not clamp a collision-limited offset outward through the obstacle. Test corners, shelves, low ceilings, obstructed candidate angles, and a safe fallback when no comfortable offset exists.
+- When using `Spherecast`, handle geometry intersecting the initial sphere separately; the sweep does not detect those initial overlaps. Verify the final view visually rather than accepting an unobstructed open-space test as collision proof.

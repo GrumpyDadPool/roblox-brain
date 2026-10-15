@@ -39,6 +39,9 @@ MAX_SKILL_CHARS = 3000
 # explicit list small and justified.
 CHAR_CAP_EXEMPT = {"roblox-growth-design"}
 MAX_DESC_CHARS = 150
+# when_to_use is listing metadata (trigger phrases), not hot-loaded body text, so it has
+# its own cap and does not count toward MAX_SKILL_CHARS.
+MAX_WHEN_TO_USE_CHARS = 300
 MAX_REF_CHARS = 50000
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = str(REPO_ROOT / "skills")
@@ -227,14 +230,29 @@ def validate_skill(skill_dir: str) -> list[str]:
     with open(skill_md, encoding="utf-8") as f:
         content = f.read()
 
-    # Size check
-    if len(content) > MAX_SKILL_CHARS and skill_name not in CHAR_CAP_EXEMPT:
-        errors.append(
-            f"{skill_name}: SKILL.md is {len(content)} chars (max {MAX_SKILL_CHARS})"
-        )
-
     # Frontmatter checks
     fm = parse_frontmatter(content)
+
+    when_to_use = fm.get("when_to_use")
+    counted = len(content)
+    if when_to_use is not None:
+        if not isinstance(when_to_use, str) or not when_to_use.strip():
+            errors.append(f"{skill_name}: when_to_use must be a non-empty string")
+        else:
+            if len(when_to_use) > MAX_WHEN_TO_USE_CHARS:
+                errors.append(
+                    f"{skill_name}: when_to_use is {len(when_to_use)} chars (max {MAX_WHEN_TO_USE_CHARS})"
+                )
+            line = next(
+                (l for l in content.splitlines() if l.startswith("when_to_use:")), ""
+            )
+            counted -= len(line) + 1
+
+    # Size check
+    if counted > MAX_SKILL_CHARS and skill_name not in CHAR_CAP_EXEMPT:
+        errors.append(
+            f"{skill_name}: SKILL.md is {counted} chars excluding when_to_use (max {MAX_SKILL_CHARS})"
+        )
     for field in ("name", "description", "last_reviewed", "sources"):
         if field not in fm:
             errors.append(f"{skill_name}: missing frontmatter field '{field}'")

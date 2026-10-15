@@ -1,7 +1,8 @@
 ---
 name: roblox-security
-description: "Use when auditing Roblox code for exploit vectors, authority models, remotes, economy, and DataStore flows."
-last_reviewed: 2026-10-04
+description: "Use when auditing or hardening Roblox code against exploits: authority, remotes, economy, purchases, and DataStore flows."
+when_to_use: "Also for security reviews, cheaters or exploiters, duplicated items or currency, trusting client values, admin commands, and pre-release audits."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/ui/text-filtering
   - https://create.roblox.com/docs/scripting/security/security-tactics
@@ -10,6 +11,9 @@ sources:
   - https://create.roblox.com/docs/projects/server-authority/techniques
   - https://create.roblox.com/docs/reference/engine/classes/Players
   - https://create.roblox.com/docs/scripting/capabilities
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/Player.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/SocialService.yaml
 ---
 
 # Roblox Security
@@ -38,7 +42,7 @@ Load for authority, remote abuse, economy, saves, bans, or sandboxing audits. Re
 
 ### Enforcement
 
-Enforcement is a product decision with appeal implications, not an automatic response. The native ban API is server-only (`Players:BanAsync` / `UnbanAsync` / `GetBanHistoryAsync`; `Players.BanningEnabled` must be on). `Duration` `-1` is permanent, `0` and other negatives are invalid; `DisplayReason` max 400 chars (filtered); `PrivateReason` max 1000, never client-shared; `ApplyDeviceBlock` lasts 24 hours and only `UnbanAsync` lifts it. Escalate via ban history; `pcall` every call (throttled HTTP). Config field table is in full.md.
+Enforcement is a product decision with appeal implications. `Players:BanAsync`/`UnbanAsync` are server-only and need `Players.BanningEnabled`; `pcall` them. Duration, reason limits and device blocks: full.md.
 
 ### Anti-Patterns
 

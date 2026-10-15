@@ -1,7 +1,8 @@
 ---
 name: roblox-luau-patterns
-description: "Use for Roblox module boundaries, object lifecycles, signals, task scheduling, fallible calls, and cleanup in Luau."
-last_reviewed: 2026-10-04
+description: "Use when writing or refactoring Roblox Luau modules, object lifecycles, signals, task scheduling, pcall, and cleanup."
+when_to_use: "Also for memory leaks, connections never disconnected, duplicate handlers after respawn, task.spawn/defer/delay misuse, retries, and reviewing module structure."
+last_reviewed: 2026-10-14
 sources:
   - https://luau-lang.org/
   - https://luau.org/library

@@ -1,7 +1,8 @@
 ---
 name: roblox-game-design
-description: "Use when designing core loops, tutorials/FTUE, levels, economies, retention phases, juice, Bartle balance, grind avoidance, or curation readiness."
-last_reviewed: 2026-09-22
+description: "Use when designing or reworking a Roblox game: core loop, tutorial/FTUE, levels, economy, retention phases, juice, grind, curation."
+when_to_use: "Also when players quit early, the game feels boring or grindy, balancing rewards and prices, reviewing a design or game idea, and auditing the first session."
+last_reviewed: 2026-10-14
 sources:
   - original
   - https://departmentofplay.net/retention-framework-keep-your-players-forever/

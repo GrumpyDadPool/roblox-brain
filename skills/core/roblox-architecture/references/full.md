@@ -316,3 +316,10 @@ Repeated observations from working Roblox developers: useful starting points, no
 - **Module-loader race pattern:** race conditions from dependency chains ("require this → require that" dominoes) cause playtests that only work after 2–3 restarts. Fix pattern: server services and client controllers don't depend on each other until their `.Init()` is called; a module loader requires all modules, then initializes all (optionally `task.spawn` per init for parallel init). Also makes the codebase far easier for AI agents to work with.
 - **BigNum handling for simulators:** `IntValue` breaks past ~10 quadrillion; `NumberValue` extends only to ~9.22e18; the standard fix is coefficient + exponent pairs (a BigNum-style library, e.g. the "infinitemath" module).
 - Max server size is 200 players; a "10k player server" is 10k spread across 200-slot servers.
+
+## Presentation and round-lifecycle contracts
+
+- Keep authoritative attack rules, eligibility, hit resolution, and cooldowns independent of swappable presentation. Select animations, audio, particles, colors, and poses through cosmetic configuration. Swap a cosmetic in tests and verify the gameplay contract stays the same.
+- Define an enrollment cutoff and fallback for players whose profile becomes ready during setup. Test arrival during role allocation, reveal, teleport, active play, and cleanup; check participation, spawn, tools, and client UI together. Avoid an accidental gap between eligibility windows.
+- Define which practice and competitive rounds advance each progression system. Snapshot the current lesson ordinal at one lifecycle boundary before counters advance; use that snapshot consistently for role choice, coaching, and protection rules. Test consecutive practice rounds and the multiplayer transition with preview overrides disabled.
+- Put each recurring round lifecycle behind a recoverable failure boundary. Preserve the original error, perform idempotent cleanup, and establish valid lobby invariants before starting another round. Inject setup and active-play failures. If cleanup cannot restore the invariants, fail visibly rather than silently looping over broken state.

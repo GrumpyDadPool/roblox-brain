@@ -402,3 +402,7 @@ These are experience-based observations, not controlled experiments. Numbers des
 - **Name + genre selection changes measurable ad performance:** CTR jumped 1.4%→3.0% just from selecting a genre and renaming the game; the algorithm may down-rank names it thinks impersonate existing games.
 - **Stability is the gatekeeper of retention:** buggy/laggy games make the tuned loop and good thumbnails invisible; one experienced dev's soft-shutdown omission (players kicked on update) damaged his algo standing; a competitor trademarked "War Tycoon"; a legal failure mode devs don't plan for.
 - **Kids-specific design cues:** bright colors, constant satisfying sound stimuli on every button, robux offers visible everywhere, progression fast at the start then slowing; "follow marketing and casino tips."
+
+## Tutorial fairness and completion checks
+
+Audit target markers, arrows, outlines, and other teaching cues against competitive information rules. Define eligible targets, viewers, game phases, and a durable lesson-completion condition. Test fresh and experienced players, bots and real opponents, and the transition from practice to a live match. A practice aid must not silently continue exposing hidden opponents or repeat after its lesson has finished.

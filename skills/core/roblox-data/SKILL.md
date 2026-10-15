@@ -1,7 +1,8 @@
 ---
 name: roblox-data
-description: "Use when implementing player data persistence with DataStore, session ownership, schemas, migrations, or save and load flows."
-last_reviewed: 2026-10-04
+description: "Use when writing, changing, debugging, or auditing Roblox player saves: DataStore, ProfileStore, session locks, schemas, migrations."
+when_to_use: "Also when data is lost, rolled back, duplicated or not saving, when adding a field to the save, changing currency or inventory storage, or reviewing save code."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/DataModel
   - https://create.roblox.com/docs/cloud-services/data-stores

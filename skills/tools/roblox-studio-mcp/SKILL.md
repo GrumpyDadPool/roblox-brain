@@ -1,12 +1,14 @@
 ---
 name: roblox-studio-mcp
-description: "Use when working with Roblox Studio through built-in MCP for scripts, scenes, generated assets, input, or playtesting."
-last_reviewed: 2026-10-04
+description: "Use when working in Roblox Studio through MCP: editing scripts or scenes, generating assets, playtesting, screenshots, or input."
+when_to_use: "Also for any Studio playtest, checking a change in game, reading runtime logs, device-simulator screenshots, and verifying a fix in Studio."
+last_reviewed: 2026-10-14
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/studio/mcp.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/projects/assets/privacy.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/parts/procedural-models.md
   - https://create.roblox.com/docs/reference/engine/classes/ProceduralModel
+  - original
 ---
 
 # Roblox Studio MCP

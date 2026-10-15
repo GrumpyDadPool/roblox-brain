@@ -215,3 +215,8 @@ Preload only the assets needed for an imminent experience state. Preloading an e
 
 - [How to animate Tool Parts](https://devforum.roblox.com/t/how-to-animate-tool-parts-guns-knifes-etc/359484) (3.1k likes) and [Jespone's guide to animations](https://devforum.roblox.com/t/jespones-guide-to-animations/225752): the tool-animation canon; [Blender rig exporter](https://devforum.roblox.com/t/blender-rig-exporteranimation-importer/34729) for the art pipeline.
 - VFX: [Hidden glass distortion w/ real-time reflections](https://devforum.roblox.com/t/hidden-glass-distortion-effect-with-real-time-reflections-tutorial/2338789); [Wind Shake](https://devforum.roblox.com/t/wind-shake-high-performance-wind-effect-for-leaves-and-foliage/1039806) foliage motion; [Realism pack](https://devforum.roblox.com/t/realism-%E2%80%94-make-your-games-feel-more-immersive/898642) (1.8k likes).
+
+## Sequence and hydrate effects explicitly
+
+- Discovery of a replicated model does not establish that its required parts or effect metadata have arrived. Define the readiness contract, use bounded waits or arrival-driven checks, and apply presentation idempotently when the requirements are met. Cancel pending work when the model is removed; test a retained corpse after the victim respawns as well as the immediate local effect.
+- Sequence phases that tween the same property. Starting a later tween with `TweenInfo.DelayTime` does not provide a safe ownership queue: competing tweens can cancel the earlier tween. Start the next phase after the prior phase actually completes under the current owner, and cancel the whole sequence when that owner ends. Inspect rise, hold, and exit visually; correct final properties alone do not prove the entrance rendered.

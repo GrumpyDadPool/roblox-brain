@@ -377,3 +377,12 @@ Two tool concepts reported as not existing yet:
 
 - **Session-replay plugin**: records player positions and actions for onboarding analytics and bug repro.
 - **Balance simulator**: run 100,000 simulated sessions to tune progression and balance values in seconds instead of weeks of hand-tuning.
+
+## Release isolation, replacement, and rollback
+
+- Identify the files, place objects, generated assets, and configuration that feed the connected Studio candidate. Keep unfinished next-release work in an isolated copy or worktree whose sync is disconnected from that candidate. Inspect Studio before publishing; a clean commit does not prove the installed payload excludes uncommitted changes.
+- Before replacing a generated tree, compare the proposed output with the installed tree. List removed paths, changed classes, required properties, scripts, and functional metadata; distinguish deliberate moves from losses. Preserve a recoverable snapshot and require each intended removal to be accounted for before replacement. Inspect the resulting behavior as well as the structural diff.
+- If installed work has drifted from its builder, reconcile the approved changes into the actual source of truth before rebuilding. Run the replacement check against the known loss case to confirm it catches the regression.
+- Before a targeted revert, preserve the current source and installed state, including uncommitted approved changes. Establish the last approved working baseline from evidence; the last commit is not automatically that baseline. Restore only the requested scope and compare unaffected behavior afterward.
+- For a historical build, inventory code, world geometry, UI, assets, persisted switches, and save-schema compatibility. Restore the corresponding place-owned content as well as source where required. Test old-code load and subsequent write against representative current saves without touching production data.
+- Write down essential fixes retained in an experimental rollback, the exact control payload, and any comparability limits. Do not call a mixed historical build an unchanged control. Preserve a tested way to return to the current working state.

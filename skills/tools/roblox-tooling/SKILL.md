@@ -1,7 +1,8 @@
 ---
 name: roblox-tooling
-description: "Use when configuring Roblox tooling such as Rojo, Wally, pesde, Selene, StyLua, Lune, Rokit, luau-lsp, or CI/CD."
-last_reviewed: 2026-10-04
+description: "Use when setting up or fixing Roblox tooling: Rojo, Wally, pesde, Selene, StyLua, Lune, Rokit, luau-lsp, tests, or CI/CD."
+when_to_use: "Also when sync or builds break, packages won't install, lint or format errors appear, or reviewing the project's toolchain."
+last_reviewed: 2026-10-14
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/ScriptEditorService.yaml
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/ChangeHistoryService.yaml

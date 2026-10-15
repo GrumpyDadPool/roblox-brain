@@ -1,13 +1,17 @@
 ---
 name: roblox-gui
-description: "Use when building Roblox menus, HUDs, shops, notifications, dialogs, or responsive cross-platform UI."
-last_reviewed: 2026-10-04
+description: "Use when building or fixing Roblox menus, HUDs, shops, dialogs, or UI that must work on phones, tablets, desktop and console."
+when_to_use: "Also when changing or reviewing any UI, or when UI overlaps, is cut off, too small, misplaced or unreadable on mobile, a phone, tablet, TV or with a controller."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/ui
   - https://create.roblox.com/docs/ui/position-and-size
   - https://create.roblox.com/docs/ui/styling
   - https://create.roblox.com/docs/ui/list-flex-layouts
   - https://create.roblox.com/docs/input
+  - https://create.roblox.com/docs/input/mobile
+  - https://create.roblox.com/docs/production/publishing/console-guidelines
+  - https://create.roblox.com/docs/studio/device-simulator
   - https://create.roblox.com/docs/reference/engine/classes/GuiService
   - https://create.roblox.com/docs/reference/engine/classes/ScreenGui
   - https://create.roblox.com/docs/projects/server-authority
@@ -33,21 +37,17 @@ sources:
 
 ## When to Load
 
-Load for HUDs, menus, shops, dialogs, notifications, or world-space UI.
+HUDs, menus, shops, dialogs, world UI, and layout bugs on phone, tablet, desktop or TV.
 
 ## Quick Reference
 
-- `ScreenGui` overlays; `SurfaceGui` on surfaces; `BillboardGui` for world labels.
-- Let layouts and constraints own repeated layout; avoid per-frame pixel positioning.
-- `Scale` for responsive structure; `Offset` for padding/fixed-size details.
-- Design for touch/gamepad too. Use `ContextActionService` for gameplay bindings where appropriate.
-- Test directional focus; set `GuiService.SelectedObject` for gamepad entry.
-- Follow existing visual language and owner art direction; test UI over the game world.
-- UI displays server state; a button is not an authority boundary.
-- Reactive UI: own per-screen cleanup separately from session state; repeat open/close to test leaks (full.md).
-- Server Authority: display confirmed inventory/currency; route gameplay input through Input Actions.
-- Resolve scrolling, text growth, clipping, and safe areas before polish.
-- TextBox submit, grids, truncation, RichText safety, and deprecated APIs: full.md.
-- Loading UI belongs in `ReplicatedFirst`; client character teleports are not readiness gates.
+- Mobile first: design on the smallest landscape phone with touch controls, then grow (full.md §11).
+- Reserve top bar, thumbstick, jump, chat; interactive UI in `CoreUISafeInsets`; place by measured `AbsolutePosition`/`AbsoluteSize`.
+- Check every element pair that can show together; reflow, don't shrink.
+- Gamepad: one `SelectedObject` owner, `SelectionGroup` bounds, restored focus, layered Back (§8).
+- Console: TV-safe area, `ViewportDisplaySize`, no chat window.
+- Layouts own repeated layout; UI shows server state; a button is not an authority boundary.
+- Reactive UI: per-screen cleanup; repeat open/close to test leaks. Loading UI in `ReplicatedFirst`.
+- TextBox submit, grids, truncation, RichText safety, deprecated APIs: full.md.
 
 > Details: [references/full.md](references/full.md)

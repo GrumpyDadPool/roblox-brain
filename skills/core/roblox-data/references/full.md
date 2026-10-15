@@ -535,3 +535,9 @@ Top-sorted DevForum canon for datastore libraries. Verify current status in-thre
 - [Stop using SetAsync()](https://devforum.roblox.com/t/stop-using-setasync-to-save-player-data/276457): the canonical anti-pattern post; session-locking rationale.
 - [Suphi's DataStore Module](https://devforum.roblox.com/t/suphis-datastore-module/2425597): lighter alternative; [DataDelve](https://devforum.roblox.com/t/datadelve-%E2%80%94-easy-free-datastore-editor/3067950): free datastore editor for debugging live data.
 - [DataPredict](https://devforum.roblox.com/t/datapredict%E2%84%A2-3-years-release-242-revenue-game-optimization-using-machine-learning-deep-learning-and-reinforcement-learning-100-models/2196446): ML toolkit on datastore analytics, relevant to `roblox-analytics`/growth work.
+
+## Grant provenance and recovery-record compatibility
+
+Keep a bounded provenance entry with each committed purchase or grant: item, quantity, actual amount/currency, source, timestamp, build context, and the operation identifier used by the authoritative owner. Include free grants and retried receipts without duplicating the entry. Keep the entry and entitlement consistent within the existing durable mutation boundary. Report ownership acquired before the ledger as unknown provenance; do not reconstruct a historical price from today's catalog.
+
+Every recovery writer is a schema producer. Serialize representative crash-left, reserved-credit, cancelled-operation, and receipt-less records, then pass them through the production load, validation, migration and recovery path before shipping. Test subsequent save and rejoin as well as successful recovery. A recovery function that accepts an in-memory record does not prove that the real validator will let a player load it.

@@ -1,6 +1,7 @@
 ---
 name: roblox-player-psychology
-description: "Use when designing persuasion/behavior mechanics: first minute, reward schedules, streaks, pricing, RNG/pity, community loop."
+description: "Use when designing or reviewing player-behavior mechanics: first minute, rewards, streaks, daily rewards, pricing, RNG/pity, community."
+when_to_use: "Also for why players don't come back, reward timing, offer placement, crate odds, and auditing a feature for manipulative or dark patterns."
 last_reviewed: 2026-09-20
 sources:
   - original

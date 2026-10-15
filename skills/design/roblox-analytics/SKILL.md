@@ -1,7 +1,8 @@
 ---
 name: roblox-analytics
-description: "Use for AnalyticsService events, economy telemetry, funnels, or per-player onboarding traces, including limits and offline analysis."
-last_reviewed: 2026-10-04
+description: "Use when adding, changing, or auditing Roblox analytics: AnalyticsService events, economy, funnels, onboarding traces, rate limits."
+when_to_use: "Also when reading stats, tracking where players drop off, measuring an update or experiment, instrumenting a feature, or checking events are logged correctly."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/AnalyticsService
   - https://create.roblox.com/docs/production/analytics/event-types
@@ -14,6 +15,8 @@ sources:
   - https://create.roblox.com/docs/cloud-services/data-stores/right-to-be-forgotten
   - https://create.roblox.com/docs/cloud/reference/features/storage
   - https://create.roblox.com/docs/reference/engine/classes/DataModel
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/analytics/retention.md
 ---
 
 # Roblox Analytics Reference
@@ -28,10 +31,8 @@ Key rules:
 - Built-in `AnalyticsService`; no third-party SDK.
 - Event types: Custom (counters/values), Economy (currency flow), Funnel (step progression)
 - Rate limit: 120 + (20 × CCU) calls/minute. Batch where possible.
-- Max 100 custom events, 10 resource types, 10 funnels, 3 custom fields/event.
 - Economy events report committed changes; diagnostic events can record failed attempts.
 - Report the balance the committed mutation RETURNED; never recompute it from the `leaderstats` replica — re-adding double-counts.
-- Up to 3 custom fields slice data without burning event cardinality.
 - Economy events track sources (earned) and sinks (spent) separately.
 - Funnel steps need not fire in order; skipped steps back-fill when a later step logs.
 - Dashboard ~24-hour delay; "View Events" validates in real time.

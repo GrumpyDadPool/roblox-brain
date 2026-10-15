@@ -1,7 +1,8 @@
 ---
 name: roblox-monetization
-description: "Use when implementing Roblox GamePasses, Developer Products, subscriptions, private servers, Creator Rewards, or purchase policy checks."
-last_reviewed: 2026-10-04
+description: "Use when adding, changing, or auditing Roblox purchases: GamePasses, Developer Products, subscriptions, private servers, policy checks."
+when_to_use: "Also for ProcessReceipt bugs, purchases not granting, pricing, shop offers, Robux prompts, refunds or make-goods, and paid random item policy."
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/MarketplaceService
   - https://create.roblox.com/docs/reference/engine/classes/MarketplaceService#BindReceiptHandler

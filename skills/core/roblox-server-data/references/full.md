@@ -559,3 +559,9 @@ end
 ## User identity in shared data
 
 Keep leaderboard keys and cross-server payloads on a documented, consistent identity scheme; don't mix `UserId`-based keys with domain-scoped `User.Id` keys. For the identity distinction, serialization, and migration implications, see `roblox-data` §1a.
+
+## Feature-state and operational-delivery checks
+
+- Define configuration precedence and behavior for an explicit true, explicit false, absent key, failed read, cached value, and first server startup. If absence falls back to a code default, do not encode an intentional enabled state merely by deleting its override. Choose a safe initial state for each feature; a parked feature must not become active transiently during a failed read.
+- Include persisted overrides in release and rollback manifests. Test cold start with failed configuration access, later successful refresh, and code-default changes; report the observed state of serving servers separately from the desired control-plane state.
+- Name operational stages separately: command accepted, server executed, message dispatched, client rendered, and user acknowledged. A backend or server acknowledgement proves only its own stage. Verify display on the intended viewport with representative text length and duration before claiming the player saw an announcement; treat human acknowledgement as unknown unless it was actually collected.

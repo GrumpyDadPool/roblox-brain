@@ -1,19 +1,22 @@
 ---
 name: roblox-publish-checklist
-description: "Use before publishing or updating a Roblox experience to run evidence-backed release gates for the surfaces that changed."
-last_reviewed: 2026-07-26
+description: "Use before publishing or updating a Roblox experience to run evidence-backed release gates and a pre-release audit."
+when_to_use: "Also when asked to ship, release, push an update, restart servers, or check whether a build is ready, safe or tested enough."
+last_reviewed: 2026-10-14
 sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/publishing/publish-games-and-places.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/publishing/adaptive-design.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/publishing/accessibility.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/production/publishing/descriptions.md
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/DataModel.yaml
 ---
 
 # Roblox Publish Checklist
 
 ## When to Load
 
-Load before publishing a new experience or updating a live one. Test the surfaces that exist and the risks introduced by the change.
+Load before publishing or updating a live experience. Test the surfaces and risks the change introduces.
 
 ## Quick Reference
 
@@ -34,9 +37,9 @@ A failed high-consequence gate means NOT READY. Do not average it into a percent
 
 - Run one normal flow plus failure, retry, leave/rejoin, and rapid-input cases relevant to the change.
 - Test every supported input mode and representative viewport/device tier.
-- Inspect runtime errors, memory growth, frame/network hot spots, and streaming behavior from measurements, not fixed object-count rules.
+- Measure errors, memory, frame/network cost and streaming.
 - Verify focus, touch targets, readable contrast, non-color state cues, reduced motion, and localized overflow where applicable.
-- Confirm experience metadata, visibility, places, thumbnails/icons, permissions, and policy declarations in the Creator Dashboard.
+- Confirm Dashboard metadata, permissions and policy; after publishing, verify the version actually serving players.
 
 ### 4. Require evidence
 
@@ -46,4 +49,4 @@ Every PASS cites a test, log, profiler capture, readback, screenshot, or dashboa
 
 `READY`, `NOT READY`, or `READY WITH ACCEPTED RISK`; blockers first, then warnings, unverified gates, evidence, rollback plan, and skipped gates with reasons.
 
-> Full gate design and conditional matrix: [references/full.md](references/full.md)
+> Details: [references/full.md](references/full.md)

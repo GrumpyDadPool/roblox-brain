@@ -70,7 +70,46 @@ Key lest facts (verified against its docs, v0.6.0 line, MIT, created 2026-07; di
 
 The line: if the user asks "should I add linting/formatting/tests?" or is hand-doing something these automate, offer the option and the tradeoff, then let them choose. If the project already has a toolchain, extend it; do not introduce a new ecosystem unprompted. The exceptions that justify recommendation: files-first source control (Rojo) and CI reproducibility, when the user is clearly trying to version or automate their project.
 
-## 1d. Language choice: Luau vs Roblox-TS (for agents and greenfield projects)
+## 1d. Editor-safe script mutation and undo recording (verified 2026-10)
+
+Plugins and MCP-style tooling that change script source from outside the human editor must handle two facts documented on the engine classes (`ScriptEditorService`, `ChangeHistoryService` creator-docs YAMLs):
+
+### UpdateSourceAsync beats a raw `Script.Source` write
+
+`ScriptEditorService:UpdateSourceAsync(script, callback)` "generates new content from the old script and updates the script editor if it's open, or the `Script` instance if the script editor is closed." Writing `script.Source = text` directly instead updates the property but can be stale or rejected relative to the editor's buffer:
+
+- If the script **is open** in the Script Editor, `UpdateSourceAsync` issues a request to the editor. The editor "may reject this update if the `Script.Source` property was out of date with the user's version of the script when this function was called, in which case the callback will be re-invoked and the attempt will be repeated." A direct property write has no such re-derivation loop and can clobber in-editor edits.
+- The callback **may not yield**; if it returns `nil`, the operation is cancelled. `UpdateSourceAsync` yields until the operation is cancelled or succeeds — call it in a coroutine/task context appropriate for your host.
+- Read the current text with `ScriptEditorService:GetEditorSource(script)` first: it returns "the edit-time source" — the text the editor displays (or would display) — which "is not always consistent with the `Script.Source` property." Deriving a patch from `Source` while the document is open diffs the wrong buffer.
+
+Operator contract: transform the callback's current source, not a previously captured full replacement. Keep the transform non-yielding and safe to re-run; return `nil` if its expected context no longer matches. Catch and report API errors, then read back with `GetEditorSource` and compare against intent before execution.
+
+For an MCP bridge, read the script, apply bounded edits through the bridge's supported source tool, and read back before running. Verify how that bridge handles open editor buffers; do not assume a tool name guarantees use of `UpdateSourceAsync`.
+
+### ChangeHistoryService: undo-scoped, bounded, best-effort
+
+Plugins **must** wrap data-model mutations in a recording: `TryBeginRecording(name, displayName)` returns an identifier string (or `nil` if a recording is already in progress for the plugin, or the user is in a solo playtest), then `FinishRecording(identifier, operation)` with `Enum.FinishRecordingOperation.Commit` (or `Append` to merge with the previous recording) commits it, and `Cancel` "cancels the recording, automatically undoing any work in progress." Rules:
+
+- Wrap **one bounded mutation** per recording. An undo waypoint spans exactly what happened between begin and finish, so a sprawling multi-phase mutation produces an all-or-nothing undo the user cannot step through.
+- `TryBeginRecording` returning `nil` is a signal to stop and report, not a reason to mutate unrecorded.
+- **A recording is not a rollback guarantee.** `Commit` records the changes into the undo stack; it does not validate them. If the post-state is wrong, the compensation is either the user's undo or an explicit inverse edit you apply and record in its own recording — do not claim `Cancel` "reverts" an already-committed mutation. `Cancel` applies to work in progress before finishing, and `SetWaypoint` is documented as deprecated soon in favor of `TryBeginRecording`.
+- `ChangeHistoryService` is not enabled at runtime; calling its methods in a running experience has no effect. It is PluginSecurity and edit-time only.
+
+### Script Sync: first-party file sync, conflict semantics
+
+Roblox ships built-in [Script Sync](https://create.roblox.com/docs/scripting/sync) for scripts. Where it overlaps agent workflows:
+
+- Sync is set per **folder** (Explorer right-click → Sync to…), resumes automatically on place open, and syncs only `Script`, `LocalScript`, `ModuleScript`, and `Folder` instances. All other instances in a synced folder are ignored; scripts with attributes or tags are also ignored — and Studio warns that this "can lead to data loss" around create/delete resolution.
+- File suffix determines the instance type on sync: `name.luau` → ModuleScript, `name.server.luau` → Script with `Server` RunContext, `name.client.luau` → Script with `Client` RunContext, `name.local.luau` → LocalScript, `name.legacy.luau` → `Legacy` RunContext, `name.plugin.luau` → `Plugin` RunContext, `name/init.*.luau` → script instance with children. (Note this is Script Sync's own convention — a `name.server.luau` becomes a Script *with a RunContext*, not a legacy LocalScript.)
+- **Conflict semantics on resume:** when starting or resuming sync with differences between Studio and disk, Script Sync shows a resolution dialog listing which scripts will be added, modified, or deleted on each side; the choice is **Keep Studio** vs **Keep Disk**, not a merge. The "Resume conflicted sync on place open" setting defaults to **Do not resume** to force manual resolution. An agent editing scripts in a synced place must read that dialog state, not assume either side won.
+- Deletion is selective: removing a synced script or folder removes only Luau scripts and supported files — non-Luau files, folders it does not manage, and non-script assets are preserved.
+- Team Create: collaborators can overwrite each other when multiple people sync and edit the same script concurrently; the docs advise avoiding that workflow. Synced instances show a sync icon in the Explorer.
+- Scale limits (documented): up to 10,000 scripts per top-level synced instance and up to 128 top-level synced instances.
+- Deleting a top-level synced instance on disk can throw in Studio; the documented order is stop sync in Studio first (choosing whether to delete files), then delete in Studio.
+
+For Rojo projects, Script Sync and `rojo serve` are competing file writers on the same place; do not run both against the same instance tree (see §1b source-of-truth paradigm).
+
+## 1e. Language choice: Luau vs Roblox-TS (for agents and greenfield projects)
 
 Verified state, August 2026 (npm + GitHub APIs): roblox-ts ~11.4k npm downloads/month, 1.3k stars, but the canonical npm release is still 3.0.0 (Sep 2023, TS 5.2-era); a community fork (`@isentinel/roblox-ts`, 4.0.x, provenance unverified) carries newer releases. That is a niche within Roblox dev; most shipped experiences and nearly all community libraries (TopbarPlus, ProfileStore, FastCast, jecs) are Luau.
 

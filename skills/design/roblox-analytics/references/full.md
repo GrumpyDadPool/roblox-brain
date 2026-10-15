@@ -260,11 +260,115 @@ Telemetry tells you the economy is broken and whether a fix worked; it does not 
 
 ## 7. Best Practices
 
-- Log from server, not client. Client events can be spoofed.
-- Log AFTER the action succeeds, not when attempted.
-- Use the event batcher for high-frequency events (kills, pickups, damage dealt).
-- Keep event names stable across updates. Renaming breaks historical comparison.
-- Use custom fields for dimensions you want to filter by (weapon, map, class).
-- Track both sources and sinks for every currency to detect inflation.
-- Implement all funnels on day 1. Adding them later means no historical baseline.
-- Test with "View Events" before relying on the 24-hour dashboard.
+- Log server-owned facts after confirmation; client UI hints remain untrusted.
+- Economy events describe committed changes, not attempted purchases.
+- Diagnostic events can record attempts, failures, and cancellations.
+- Keep names stable and use fields for dimensions.
+- Aggregate high-frequency events through the existing analytics owner.
+- Track currency sources and sinks; instrument funnels before launch, since history cannot be backfilled.
+- Test with "View Events" before relying on the delayed dashboard.
+
+## 8. Per-player onboarding traces (first-session telemetry)
+
+`AnalyticsService` funnels are aggregate counters. A per-player **onboarding trace** is
+complementary: one small data-store record per player that preserves the ordered
+sequence of a first session (join → milestones → first meaningful action), so you can
+inspect individual journeys, not just aggregate drop-off. Traces record **what
+happened, not why**: they are evidence of sequence and timing, never proof of player
+intent, and never a substitute for playtesting or design judgment.
+
+### Scope and eligibility
+
+- **First session only.** Use an explicit first-visit marker or a successful
+  new-profile result from the canonical profile owner. A failed profile read is not
+  a new player. NEVER use "trace key not found" as the trigger: a deleted,
+  failed, or never-saved trace is retention/save loss, not a new player, and re-tracing
+  on that signal corrupts your new-player population.
+- **Bounded duration.** Stop recording at first-session completion or at a 10–15 minute
+  cap, whichever comes first. The trace exists to answer "what did a new player do
+  first", not to log their whole career. Log join, spawn, tutorial steps, round
+  entry/start, role, key actions, death, shop interaction, and leave as relevant.
+  Completion, timeout, leave, and shutdown are distinct terminal reasons. Record
+  the build/cohort context needed to avoid mixing incompatible onboarding versions.
+- **One record per player.** On rejoin, do not overwrite or append: if the save
+  succeeded the trace exists; if it failed, that session is lost by design. Handle
+  overlapping sessions (same user on two servers) by writing from one owner only,
+  idempotently — never double-write.
+
+### Recording and saving
+
+- Keep an **in-memory buffer** during the session. Write the data store **once**,
+  idempotently, at completion, time cap, `PlayerRemoving`, or `BindToClose` — the same
+  save boundaries as the profile store. `BindToClose` gives a 30-second best-effort
+  window; a hard crash loses the trace. Accept that loss instead of adding live writes;
+  optionally keep a small number of bounded mid-session checkpoints, each itself
+  idempotent.
+- **Key naming:** `trace_<UserId>` (or `<prefix>_<UserId>`), scoped like your other
+  player keys so it stays inside your existing identity scheme.
+- **Size:** keep the serialized payload far below the 4,194,304-character per-key limit
+  (`HttpService:JSONEncode` measures serialized length). Enforce a bounded total:
+  cap event count and serialized size. Preserve join/onboarding milestones; drop
+  noisy repeats first and mark truncation or dropped-event counts so absence is
+  not mistaken for inaction. Do not keep evicting the beginning of a first-session trace.
+
+### What goes in a trace
+
+- **Compact event codes + elapsed time.** Use a versioned schema: a version field plus
+  a version→code dictionary kept with the project's schema docs, so old traces stay
+  readable after renames. Numeric codes are optional, not mandatory — short stable
+  strings are fine while they stay bounded.
+- **Server events are trusted.** If the client reports UI steps (menus opened, buttons
+  clicked), expose one remote carrying a **whitelist** of finite signal IDs, batched,
+  with server-enforced size/count/rate caps. Never let a remote trigger data-store
+  writes directly. Validate dense batch shape, event IDs, finite numbers, and
+  cumulative limits; see `roblox-networking`. Server receipt time orders batches,
+  not the original clicks: preserve within-batch order and label client elapsed
+  times untrusted rather than pretending batched receipt times measure UI timing.
+- **Device category** (e.g. phone/tablet/desktop) may be recorded as an optional,
+  coarse, untrusted client hint for slicing only — never as authoritative platform
+  attribution.
+- **Population anchors:** record join and the server population at join, plus elapsed
+  time to the **first meaningful action** — the first action your design defines as
+  engagement, not merely spawning or loading.
+- **Attempts, failures, and cancellations are trace-worthy** — a cancelled tutorial or
+  a failed attempt IS the signal. **Economy inside a trace is restricted:** log only
+  confirmed mutations and their receipts, matching the economy-event rules in §1;
+  never log prompts or impressions as economy events.
+- **Privacy:** no free text, chat content, usernames, or display names. The trace is
+  user-linked data: keep it inside your RTBF coverage and inside any offline
+  exports/copies of user data.
+
+### Retention and deletion
+
+Choose a short retention period for launch diagnosis (for example, 30 days is
+operator guidance, not a platform requirement). Store capture time, define the
+cleanup owner/schedule, and delete expired records and user-linked exports. Exclude
+Studio and configured tester IDs; do not exclude genuine users based on client claims.
+
+- Register an RTBF key template for the trace store (e.g. `trace_{UserId}`) via Data
+  Stores Manager or the Configs API so automated right-to-be-forgotten processing
+  covers traces. Up to 100 templates are allowed; the `{UserId}` token is
+  case-sensitive and must appear in the key name or scope.
+- If traces feed an offline export or analysis pipeline, deleting the in-game key is
+  not enough: user-linked copies in exports must be included in the same deletion flow.
+
+### Inspecting traces offline
+
+The Cloud v2 entries API lists keys without values: `GET
+/cloud/v2/universes/{universe_id}/data-stores/{data_store_id}/entries` (scope
+`universe-datastores.objects:list`) returns `path`/`id` only — paginate with
+`pageToken` (maxPageSize up to 256, default 10) and use the `id.startsWith(...)`
+filter to page through `trace_` keys. Fetch each value with `GET
+.../entries/{entry_id}` (scope `universe-datastores.objects:read`). Follow the
+returned resource paths and actual scope representation; do not assume every
+entry ID is just the key. Use `roblox-cloud` for least-privilege API keys and
+request handling. Compute time-to-step distributions, inspect early leavers, and
+segment by build and population at join to test empty-server bounce hypotheses.
+Capped/completed traces do not establish total session duration. Missing saves
+are lost observations, not successful sessions; report coverage before conclusions.
+
+> Design choices in this section — first-visit eligibility, the 10–15 minute
+> cap, buffer-then-save, whitelist size — are guidance from practice, not Roblox
+> statements. The official facts (30-second `BindToClose` window, 4,194,304-character
+> key limit, RTBF templates, Cloud v2 endpoints and scopes) are sourced in the skill's
+> frontmatter and verified against current creator docs.

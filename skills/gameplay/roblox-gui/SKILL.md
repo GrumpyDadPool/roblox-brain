@@ -13,7 +13,6 @@ sources:
   - https://create.roblox.com/docs/production/publishing/console-guidelines
   - https://create.roblox.com/docs/studio/device-simulator
   - https://create.roblox.com/docs/reference/engine/classes/GuiService
-  - https://create.roblox.com/docs/reference/engine/classes/GuiObject
   - https://create.roblox.com/docs/reference/engine/classes/ScreenGui
   - https://create.roblox.com/docs/projects/server-authority
   - https://create.roblox.com/docs/input/input-action-system
@@ -47,6 +46,8 @@ HUDs, menus, shops, dialogs, world UI, and layout bugs on phone, tablet, desktop
 - Check every element pair that can show together; reflow, don't shrink.
 - Gamepad: one `SelectedObject` owner, `SelectionGroup` bounds, restored focus, layered Back (§8).
 - Console: TV-safe area, `ViewportDisplaySize`, no chat window.
-- Layouts own repeated layout; UI shows server state; loading UI in `ReplicatedFirst`.
+- Layouts own repeated layout; UI shows server state; a button is not an authority boundary.
+- Reactive UI: per-screen cleanup; repeat open/close to test leaks. Loading UI in `ReplicatedFirst`.
+- TextBox submit, grids, truncation, RichText safety, deprecated APIs: full.md.
 
 > Details: [references/full.md](references/full.md)

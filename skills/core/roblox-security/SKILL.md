@@ -2,7 +2,7 @@
 name: roblox-security
 description: "Use when auditing or hardening Roblox code against exploits: authority, remotes, economy, purchases, and DataStore flows."
 when_to_use: "Also for security reviews, cheaters or exploiters, duplicated items or currency, trusting client values, admin commands, and pre-release audits."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/ui/text-filtering
   - https://create.roblox.com/docs/scripting/security/security-tactics

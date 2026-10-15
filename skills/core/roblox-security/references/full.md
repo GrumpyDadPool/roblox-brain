@@ -9,6 +9,12 @@ Use this skill when designing security systems, auditing existing code for vulne
 
 **The client is compromised. Always.** Exploiters run arbitrary Luau on the client via injection tools. Every LocalScript, every ReplicatedStorage module, and every client-side value is readable and writable by attackers. The server is the source of truth, but the implementation depends on the authority model.
 
+## Threat-model each feature
+
+Before implementation, apply the official [security-by-design questions](https://create.roblox.com/docs/scripting/security/security-tactics): what can a client with arbitrary arguments and local state make this feature do? What happens under sustained spam, and what is the maximum legitimate rate? Can it harm another player, consume unbounded server work, or expose unnecessary internal state?
+
+Operator workflow: identify the authoritative owner, bound request size and work **before** expensive operations, check permissions against server state, and exercise malformed, repeated, and concurrent requests. A generic remote validator does not prove that an individual action is authorized. Use `roblox-networking` for boundary mechanics.
+
 ## Authority Models
 
 ### Classic replication

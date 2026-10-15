@@ -1,8 +1,8 @@
 ---
 name: roblox-luau-patterns
-description: "Use when writing or refactoring Roblox Luau modules, object lifecycles, signals, task scheduling, pcall handling, and cleanup."
+description: "Use when writing or refactoring Roblox Luau modules, object lifecycles, signals, task scheduling, pcall, and cleanup."
 when_to_use: "Also for memory leaks, connections never disconnected, duplicate handlers after respawn, task.spawn/defer/delay misuse, retries, and reviewing module structure."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-14
 sources:
   - https://luau-lang.org/
   - https://luau.org/library
@@ -10,6 +10,7 @@ sources:
   - https://create.roblox.com/docs/reference/engine/classes/StringValue
   - https://create.roblox.com/docs/reference/engine/classes/CFrameValue
   - https://devforum.roblox.com/t/studio-beta-reference-instances-directly-with-attributes/4753441
+  - https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md
   - original
 ---
 
@@ -17,11 +18,11 @@ sources:
 
 ## When to Load
 
-Load when choosing a module shape, owning Roblox instances or event connections, scheduling work, or preserving failure semantics. Use `roblox-luau-core` for language behavior, `roblox-luau-types` for types, and `roblox-architecture` for project-wide ownership and startup.
+Load for module shapes, resource ownership, scheduling, and failure contracts. See `roblox-luau-core` for semantics, `roblox-luau-types` for types, `roblox-architecture` for startup.
 
 ## Quick Reference
 
-### Choose the smallest shape
+### Choose a shape
 
 - **Plain functions:** default for stateless transformation or validation.
 - **Module with private state:** one explicit subsystem owner. Do not create a manager class merely to namespace functions.
@@ -32,9 +33,9 @@ Constructors use `.`, instance methods use `:`, and mutable fields belong on the
 
 ### Make ownership visible
 
-The code that connects a signal, creates an instance, or starts a task owns cleanup. Store connections and cancel or disconnect them when it ends. Type custom signal payloads once (`Signal<T...>`) and export the alias; see full.md.
+Signal connections, instances, and tasks need cleanup owners. Disconnect/cancel at teardown. Export typed custom signal payloads (`Signal<T...>`).
 
-Configure an instance before parenting when observers should not see partial state. Parent earlier only when the API or lifecycle requires ancestry, and document that reason. This is visibility control, not a magic replication-race fix.
+Configure before parenting to hide partial state. Parent earlier only when ancestry is required; explain why. This does not guarantee replication ordering.
 
 ### Preserve failure semantics
 
@@ -48,6 +49,10 @@ return value, nil -- value may legitimately be nil
 
 Do not collapse "call succeeded and returned nil" into "call failed." Retry only when the domain operation is safe to repeat. Persistence, HTTP, purchases, and remotes belong to their domain skills.
 
+### Naming and return contracts
+
+Practitioner conventions: mark yielding functions `Async`, keep return counts consistent, and prefer named module exports. Respect existing project contracts; details in full.md.
+
 ### Schedule deliberately
 
 Use `task.defer`, `task.spawn`, `task.delay`, and `task.cancel` deliberately. Avoid legacy `wait()` and unjustified polling. Prefer a real state-change signal; otherwise choose and measure an explicit cadence.
@@ -56,4 +61,4 @@ Use `task.defer`, `task.spawn`, `task.delay`, and `task.cancel` deliberately. Av
 
 Clear owner, narrow public API, no circular require, no accidental concurrent startup, success and missing-data states remain distinct, connections/tasks cleaned up, client input routed to `roblox-networking`.
 
-> Detailed decision rules and lifecycle examples: [references/full.md](references/full.md)
+> Details: [references/full.md](references/full.md)

@@ -875,6 +875,140 @@ entries:
     class: DataModel
     member: ServerRestartScheduled
   verified: 2026-10-02
+- id: analytics-trace-shutdown-budget
+  claim: BindToClose waits at most 30 seconds for all bound functions
+  files:
+  - path: skills/design/roblox-analytics/references/full.md
+  teaching_needles: [BindToClose, 30-second]
+  check:
+    type: method_description_contains
+    class: DataModel
+    method: BindToClose
+    contains: waits 30 seconds
+  verified: 2026-10-04
+- id: analytics-trace-serialized-size-check
+  claim: HttpService.JSONEncode provides the serialized representation for trace size checks
+  files:
+  - path: skills/design/roblox-analytics/references/full.md
+  teaching_needles: [JSONEncode]
+  check:
+    type: member_exists
+    class: HttpService
+    member: JSONEncode
+  verified: 2026-10-04
+- id: monetization-pass-purchase-refresh
+  claim: MarketplaceService.PromptGamePassPurchaseFinished supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [PromptGamePassPurchaseFinished]
+  check:
+    type: method_description_contains
+    class: MarketplaceService
+    method: UserOwnsGamePassAsync
+    contains: cache gets updated
+  verified: 2026-10-04
+- id: monetization-subscription-status-query
+  claim: MarketplaceService.GetUserSubscriptionStatusAsync supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [GetUserSubscriptionStatusAsync]
+  check:
+    type: method_description_contains
+    class: MarketplaceService
+    method: GetUserSubscriptionStatusAsync
+    contains: still processing or
+  verified: 2026-10-04
+- id: monetization-subscription-status-event
+  claim: Players.UserSubscriptionStatusChanged supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [UserSubscriptionStatusChanged]
+  check:
+    type: member_exists
+    class: Players
+    member: UserSubscriptionStatusChanged
+  verified: 2026-10-04
+- id: monetization-robux-transfer-prompt
+  claim: MarketplaceService.PromptRobuxTransferAsync supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [PromptRobuxTransferAsync]
+  check:
+    type: method_description_contains
+    class: MarketplaceService
+    method: PromptRobuxTransferAsync
+    contains: server-only
+  verified: 2026-10-04
+- id: monetization-dynamic-product-pricing
+  claim: MarketplaceService.GetProductInfoAsync supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [GetProductInfoAsync]
+  check:
+    type: member_exists
+    class: MarketplaceService
+    member: GetProductInfoAsync
+  verified: 2026-10-04
+- id: monetization-gift-price-levels
+  claim: MarketplaceService.GetUsersPriceLevelsAsync supports the documented entitlement or pricing flow
+  files:
+  - path: skills/design/roblox-monetization/references/full.md
+  teaching_needles: [GetUsersPriceLevelsAsync]
+  check:
+    type: member_exists
+    class: MarketplaceService
+    member: GetUsersPriceLevelsAsync
+  verified: 2026-10-04
+- id: gui-mobile-submit
+  claim: TextBox.ReturnPressedFromOnScreenKeyboard supports the documented workflow
+  files:
+  - path: skills/gameplay/roblox-gui/references/full.md
+  teaching_needles: [ReturnPressedFromOnScreenKeyboard]
+  check:
+    type: member_exists
+    class: TextBox
+    member: ReturnPressedFromOnScreenKeyboard
+  verified: 2026-10-04
+- id: gui-grid-layout
+  claim: UIGridLayout.FillDirectionMaxCells supports the documented workflow
+  files:
+  - path: skills/gameplay/roblox-gui/references/full.md
+  teaching_needles: [FillDirectionMaxCells]
+  check:
+    type: member_exists
+    class: UIGridLayout
+    member: FillDirectionMaxCells
+  verified: 2026-10-04
+- id: tooling-editor-source-update
+  claim: ScriptEditorService.UpdateSourceAsync supports the documented workflow
+  files:
+  - path: skills/tools/roblox-tooling/references/full.md
+  teaching_needles: [UpdateSourceAsync]
+  check:
+    type: member_exists
+    class: ScriptEditorService
+    member: UpdateSourceAsync
+  verified: 2026-10-04
+- id: tooling-undo-recording
+  claim: ChangeHistoryService.TryBeginRecording supports the documented workflow
+  files:
+  - path: skills/tools/roblox-tooling/references/full.md
+  teaching_needles: [TryBeginRecording]
+  check:
+    type: member_exists
+    class: ChangeHistoryService
+    member: TryBeginRecording
+  verified: 2026-10-04
+- id: gui-legacy-position-tween-deprecated
+  claim: GuiObject.TweenPosition is deprecated in favor of TweenService
+  files:
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: method_deprecation_status
+    class: GuiObject
+    member: TweenPosition
+    expected: deprecated
+  verified: 2026-10-04
 - id: preferred-input-enum
   claim: UserInputService.PreferredInput uses Enum.PreferredInput (Touch, Gamepad, KeyboardAndMouse)
   files:

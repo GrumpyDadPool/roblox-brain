@@ -6,6 +6,14 @@ All notable changes to `roblox-brain` are documented here.
 
 ### Added
 
+- First-session onboarding traces alongside analytics funnels, with bounded collection, save ownership, privacy, retention, and offline analysis guidance.
+- Selected Luau API and state-design guidance informed by Kampfkarren's guidelines, written independently and distinguished from personal style preferences.
+- Reuse-first integration guidance for proven project modules, plus centralized Game Pass benefits and purchase refresh handling.
+- Subscription reconciliation, Robux transfer receipt handling, dynamic prices, and price-aware gifting guidance.
+- Feature-level threat modeling and Luau literal-search, Unicode, binary-string, and repeat-loop pitfalls.
+- Remote transport and bindable boundaries, cross-server receive limits, and shared MemoryStore quota planning.
+- Text-entry, grid layout, truncation, RichText safety, and legacy GUI API migration guidance.
+- Editor-safe source changes, undo recordings, Script Sync conflict handling, untrusted place-content boundaries, and asset-permission diagnosis.
 - `roblox-gui`: mobile-first layout guidance: design order from the smallest landscape phone, the screen regions Roblox UI already occupies, safe-area containers, measured placement with an example, overlaps caused by state combinations, reflowing small-screen windows, console/TV rules from the console guidelines, and a Device Simulator + Controller Emulator device matrix.
 - `roblox-gui`: gamepad focus ownership: entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close, and stray selections that block gameplay.
 - `roblox-input`: hybrid-device presentation from `PreferredInput`, touch action buttons (touch ownership, placement from the jump button), a single gameplay input gate, cancelling held actions without firing, gamepad tool activation and center aim, platform button hints, and a cross-device input test checklist.
@@ -13,7 +21,8 @@ All notable changes to `roblox-brain` are documented here.
 
 ### Changed
 
-- `roblox-gui` and `roblox-input` descriptions gained `when_to_use` trigger phrases (overlaps, cut-off or small UI, mobile, console, stuck controller focus, wrong button prompts), so the skills load on bug reports, not only on build requests.
+- Every skill's description now triggers on changing, fixing, debugging, reviewing and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases users actually type ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). Hosts that list skills by description now match bug reports and audit requests.
+- `validate_skills.py` accepts an optional `when_to_use` (≤300 chars), excluded from the SKILL.md size cap; AGENTS.md documents trigger-phrase conventions.
 
 ### Fixed
 

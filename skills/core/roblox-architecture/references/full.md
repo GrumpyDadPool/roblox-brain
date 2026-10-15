@@ -15,6 +15,18 @@ For a behavior, answer:
 
 If those answers fit in one small module or script, keep them there. A service/controller pair is not automatically more architectural than two scripts. Add boundaries because ownership differs, not because a template has folders to fill.
 
+### Reuse-first integration workflow
+
+Operator/design guidance: a small set of proven modules can be a better foundation for AI-assisted games than repeated regeneration. This is not a mandate to create a framework or trust a module merely because it is familiar.
+
+1. Inventory the project’s existing pathfinding, entitlement, persistence, networking, and cleanup owners before writing replacements. Read their implementations, pinned dependency docs, tests, and representative callers. Do not assume a method name proves its behavior.
+2. Record only the contract needed for this task: caller side, inputs/results, owned state, possible yields, initialization order, failure/retry behavior, and teardown. Identify who already saves profiles and processes receipts.
+3. Connect the feature through those public operations. Keep product/pass IDs and game-specific behavior in configuration or a narrow dispatch table, not duplicated purchase callbacks or parallel save loops. Let each module keep its existing failure and security checks.
+4. Add a small adapter only for a real contract mismatch. Fix an unsafe existing module at its owner rather than wrapping it with a second competing implementation. Avoid a generic utility module that accumulates unrelated features.
+5. Exercise the connection, not just the isolated modules: successful feature flow, unavailable dependency, duplicate request, player departure, and teardown/recreation. Check connections, tasks, instances, and player-keyed caches return to baseline; static cleanup keywords alone are not a leak test. Domain failure tests live in `roblox-data`, `roblox-monetization`, and `roblox-npc-ai`.
+
+If no suitable owner exists, search native APIs and maintained libraries first, then add the smallest missing behavior. Explain the verified reuse path to the implementing agent so it composes the established kit instead of silently bypassing it.
+
 ## 2. Runtime location is a trust and execution decision
 
 | Location | Typical role | Important consequence |

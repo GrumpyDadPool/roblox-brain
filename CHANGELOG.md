@@ -2,6 +2,23 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- `roblox-gui`: mobile-first layout guidance: design order from the smallest landscape phone, the screen regions Roblox UI already occupies, safe-area containers, measured placement with an example, overlaps caused by state combinations, reflowing small-screen windows, console/TV rules from the console guidelines, and a Device Simulator + Controller Emulator device matrix.
+- `roblox-gui`: gamepad focus ownership: entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close, and stray selections that block gameplay.
+- `roblox-input`: hybrid-device presentation from `PreferredInput`, touch action buttons (touch ownership, placement from the jump button), a single gameplay input gate, cancelling held actions without firing, gamepad tool activation and center aim, platform button hints, and a cross-device input test checklist.
+- Drift-registry entries for the new API claims.
+
+### Changed
+
+- `roblox-gui` and `roblox-input` descriptions gained `when_to_use` trigger phrases (overlaps, cut-off or small UI, mobile, console, stuck controller focus, wrong button prompts), so the skills load on bug reports, not only on build requests.
+
+### Fixed
+
+- `roblox-input`: `PreferredInput` is typed `Enum.PreferredInput`, not `Enum.UserInputType`. The "Switch UI on PreferredInput change" example now observes `PreferredInput` instead of `LastInputTypeChanged`.
+
 ## [2.2.0] - 2026-10-02
 
 ### Added

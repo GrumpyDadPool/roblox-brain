@@ -20,7 +20,7 @@ For a Server Authority project, inputs that affect the core simulation should us
 | `GamepadEnabled` | bool | Any supported gamepad connected |
 | `AccelerometerEnabled` / `GyroscopeEnabled` | bool | Mobile sensors present |
 | `VREnabled` | bool | VR headset active |
-| `PreferredInput` | Enum.UserInputType | Device the player is **currently using most**. Better than per-device flags on hybrids. |
+| `PreferredInput` | Enum.PreferredInput | Primary input the player is likely using now: `KeyboardAndMouse`, `Gamepad`, `Touch` or `MicroGamepad`. Changes during a session; observe it with `GetPropertyChangedSignal`. Better than per-device flags on hybrids. |
 | `MouseBehavior` | Enum.MouseBehavior | `Default`, `LockCenter`, `LockCurrentPosition` |
 | `MouseDeltaSensitivity` | number | 0–10, sensitivity multiplier for mouse-movement deltas (`GetMouseDelta()`, `InputChanged`); does not affect the cursor icon or the player's own camera-sensitivity setting |
 | `MouseIcon` / `MouseIconEnabled` / `MouseIconContent` | string/bool | Custom cursor (AssetId, ContentText) |
@@ -435,11 +435,76 @@ Key members (verified against the class page):
 
 Do not invent member names: older community references carry stale VRService members. Check the class page when in doubt.
 
+## Mobile-First and Hybrid Input
+
+Roblox's mobile input guide states that most sessions are played on mobile devices. Design controls for touch first, then map the same actions to gamepad and keyboard/mouse.
+
+- **Capability vs presentation:** `TouchEnabled`, `KeyboardEnabled` and `GamepadEnabled` say what hardware exists. `UserInputService.PreferredInput` (`Enum.PreferredInput`: `KeyboardAndMouse`, `Gamepad`, `Touch`, `MicroGamepad`) says what the player is most likely using now. Choose what to *show* (touch buttons, reticles, key hints) from `PreferredInput`, and keep every capability's route working.
+- **Observe, don't cache:** `PreferredInput` changes during a session (a tablet with a keyboard, a phone with a Bluetooth pad, a PC with a controller). Listen with `GetPropertyChangedSignal("PreferredInput")`. Layout chosen once at startup from `TouchEnabled` flips or sticks on hybrid devices.
+- **Cancel on switch:** a press or charge that is in progress when the input mode changes should be cancelled, not completed.
+
+## Touch Action Buttons
+
+A custom on-screen action button (attack, throw, use) replaces a mouse click. Get these right before adding assistance features:
+
+- **Button-owned touches:** an action fires only for a touch that **began** on the button. Track that touch's `InputObject` from began to ended. A camera drag that slides across the button must not fire it, and a tap anywhere else on screen must not act as an attack while the camera uses drag-to-look.
+- **Placement from the jump button:** the default jump button lives under `PlayerGui.TouchGui` (find `JumpButton` there) and changes size with screen size (70 vs 120 pixels at the ~500 px min-axis preset in the default control script). Place custom buttons from its measured `AbsolutePosition`/`AbsoluteSize`, keep a gap, and fall back to the size rule only when it isn't present. Clear the thumbstick zone (lower-left).
+- **Re-place when the screen state changes:** other HUD elements may appear beside the button in some states (an out-of-round menu, a spectate bar). Check each state on the smallest phone (`roblox-gui` §11.5).
+- **One aim contract:** if the button fires toward the screen center, show a reticle. Offset the camera slightly (a shoulder view) so the reticle isn't hidden behind the character, and use the same aim for gamepad (below).
+- **Feedback on the control:** pressed state, cooldown fill and disabled state belong on the button itself, because the player's thumb covers it and the rest of the HUD is out of view.
+- **Hide when it can't act:** unarmed, dead, a window open, a cutscene.
+
+## Gameplay Input Gating and Cancellation
+
+Keep one function that answers "may gameplay input act right now?". Every attack, charge, equip-cycle and ability handler checks it:
+
+```luau
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
+
+local function gameplayAllowed(isGameWindowOpen: boolean): boolean
+	return not isGameWindowOpen
+		and UserInputService:GetFocusedTextBox() == nil
+		and not GuiService.MenuIsOpen
+		and GuiService.SelectedObject == nil
+end
+```
+
+- `GuiService.MenuIsOpen` is `true` while any Roblox core menu is open.
+- A non-nil `SelectedObject` means the gamepad is driving UI. Without this check, a stray selection on a HUD button can turn R2/A into a UI press, or let an attack fire under a menu.
+- **Cancel is not release:** a hold-to-charge action (throw, charged shot) must *cancel* when permission is lost, on `Enum.UserInputState.Cancel`, on unequip or death, on window focus loss, or when the input mode changes. Routing cancel through the release path fires the attack the player was trying to abort.
+- **Track the originating gamepad:** remember which `UserInputType` (`Gamepad1`–`Gamepad8`) started a hold. Poll that pad, not a hardcoded `Gamepad1`, and cancel if *that* pad disconnects (`GamepadDisconnected`).
+
+## Gamepad Aiming and Tool Activation
+
+- **R2 and tools:** the default control scripts call `ContextActionService:BindActivate` for `ButtonR2`, which fires `Tool.Activated` for the equipped tool. `Tool.ManualActivationOnly = true` suppresses that route (and mouse clicks), and the tool then fires only through `Tool:Activate()`. Projects often set it so touch fires only from a custom button. Doing so also silently disables gamepad R2, so set it from the current `PreferredInput` rather than from `TouchEnabled`.
+- **Aim from the screen center on gamepad:** code that aims at `UserInputService:GetMouseLocation()` gets a stale or meaningless point when the player uses a controller. When `PreferredInput` is `Gamepad` (or the mouse is locked), aim from the viewport center, show the same reticle as touch, and verify that one trigger press produces exactly one shot.
+- **Equip on bumpers, not number keys:** a custom hotbar should cycle with `ButtonL1`/`ButtonR1` on gamepad. Hints such as "Press 1" must not show to gamepad or touch players.
+
+## Platform Button Hints
+
+- `UserInputService:GetStringForKeyCode(keyCode, format)` returns the label for the current platform. Pass `Enum.KeyCodeStringFormat.Abbreviated` for short labels (`L1`/`R1` on PlayStation, `LB`/`RB` on Xbox).
+- `UserInputService:GetImageForKeyCode(keyCode)` returns Roblox's default icon for the key on the current controller.
+- With the Input Action System, `InputActionLabel` keeps binding icons in sync across devices without code.
+- Never hardcode Xbox names; PlayStation players see different glyphs. Refresh hints when `PreferredInput` changes, including tooltips and onboarding text that mention a key.
+
+## Testing Input Across Devices
+
+Use Studio's Device Simulator with Controller Emulator (Emulation tab): emulate Xbox, then PlayStation, plug and unplug mid-session, and switch touch → gamepad → mouse without respawning. A per-feature checklist:
+
+1. Controller-only cold join: move, look, jump with no mouse or keyboard touched.
+2. Every action: tap, hold, release, and cancel by opening a window, opening the Roblox menu and disconnecting the pad mid-hold. Nothing should fire on cancel.
+3. Every window: enter, navigate in all four directions to the last row, act, Back, and confirm focus lands somewhere visible each time (`roblox-gui` §8).
+4. Touch: drag the camera across every on-screen button (nothing fires), and move, jump, look and attack at the same time on the smallest phone.
+5. Hybrid: on a touch device, use a controller, then touch again. Buttons, reticle and hints follow the active input.
+
+The simulator does not reproduce native console overlays (purchase prompts, the system keyboard) or real thumb reach; test those on hardware before calling a release device-tested.
+
 ## Patterns
 
 ### Platform-adaptive mobile UI
 
-Don't gate mobile UI on `UIS.TouchEnabled` alone: a touchscreen laptop would show mobile controls even when the player is using mouse/keyboard. Roblox core scripts detect the **last input actually used** (`GetLastInputType` / `LastInputTypeChanged`), which adapts instantly when a player switches devices mid-session.
+Don't gate mobile UI on `UIS.TouchEnabled` alone: a touchscreen laptop would show mobile controls even when the player is using mouse/keyboard. Roblox's input docs recommend `UserInputService.PreferredInput` for this (see the next pattern). The lower-level alternative below reads the **last input actually used** (`GetLastInputType` / `LastInputTypeChanged`), which flips on every single input.
 
 ```luau
 local UIS = game:GetService("UserInputService")
@@ -472,13 +537,18 @@ end)
 
 ### Switch UI on PreferredInput change
 ```luau
-UIS.LastInputTypeChanged:Connect(function(newType)
-    if newType == Enum.UserInputType.Touch then
+local function applyInput()
+    local preferred = UIS.PreferredInput
+    if preferred == Enum.PreferredInput.Touch then
         showMobileButtons()
-    elseif newType == Enum.UserInputType.Keyboard then
+    else
         hideMobileButtons()
     end
-end)
+    showGamepadHints(preferred == Enum.PreferredInput.Gamepad)
+end
+
+applyInput()
+UIS:GetPropertyChangedSignal("PreferredInput"):Connect(applyInput)
 ```
 
 ### Camera mouse-look (client-only)
@@ -546,6 +616,11 @@ end)
 - **Using `UserInputService` on the server.** Silently no-ops. Use `LocalScript`.
 - **Not un-binding on context exit.** Stale bindings fire even after the player leaves the context. Call `UnbindAction` in cleanup.
 - **Hard-coding platform assumptions.** Check `TouchEnabled` / `GamepadEnabled` at runtime; don't assume desktop-only.
+- **Choosing layout once from `TouchEnabled`.** Hybrid devices change input mid-session; present controls from `PreferredInput` and observe it.
+- **Setting `Tool.ManualActivationOnly = true` for touch and losing gamepad R2.** It also suppresses the `BindActivate` route the default controls use for `ButtonR2`.
+- **Aiming gamepad shots at `GetMouseLocation()`.** Use the viewport center when the player is on a controller.
+- **Firing on cancel.** A cancelled hold must not run the release path.
+- **Hardcoding Xbox button names.** Use `GetStringForKeyCode` / `GetImageForKeyCode`.
 - **Reading `MouseWheel` from InputBegan.** Wheel events only fire `InputChanged`.
 - **Touching `IsKeyDown` in a tight loop without throttling.** It's cheap but RenderStepped is the right cadence.
 - **No debounce on JumpRequest.** Fires once per frame the jump key is held.

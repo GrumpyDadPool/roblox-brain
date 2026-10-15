@@ -875,3 +875,117 @@ entries:
     class: DataModel
     member: ServerRestartScheduled
   verified: 2026-10-02
+- id: preferred-input-enum
+  claim: UserInputService.PreferredInput uses Enum.PreferredInput (Touch, Gamepad, KeyboardAndMouse)
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  teaching_needles:
+  - PreferredInput
+  check:
+    type: enum_item_exists
+    enum: PreferredInput
+    item: Touch
+  verified: 2026-10-14
+- id: guiservice-tenfoot-deprecated
+  claim: GuiService:IsTenFootInterface is deprecated in favor of ViewportDisplaySize
+  files:
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: method_deprecation_status
+    class: GuiService
+    member: IsTenFootInterface
+    expected: deprecated
+  verified: 2026-10-14
+- id: guiservice-viewport-display-size
+  claim: GuiService.ViewportDisplaySize decides large-display (TV) layout
+  files:
+  - path: skills/gameplay/roblox-gui/SKILL.md
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: property_exists
+    class: GuiService
+    property: ViewportDisplaySize
+  verified: 2026-10-14
+- id: screeninsets-coreui-safe
+  claim: Enum.ScreenInsets.CoreUISafeInsets is the safe area for interactive UI
+  files:
+  - path: skills/gameplay/roblox-gui/SKILL.md
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: enum_item_exists
+    enum: ScreenInsets
+    item: CoreUISafeInsets
+  verified: 2026-10-14
+- id: guiservice-topbar-inset
+  claim: GuiService.TopbarInset is the dynamic free strip in the top bar
+  files:
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: property_exists
+    class: GuiService
+    property: TopbarInset
+  verified: 2026-10-14
+- id: guiservice-menu-is-open
+  claim: GuiService.MenuIsOpen reports an open Roblox core menu for gameplay gating
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  check:
+    type: property_exists
+    class: GuiService
+    property: MenuIsOpen
+  verified: 2026-10-14
+- id: guibase2d-selection-group
+  claim: GuiBase2d.SelectionGroup bounds gamepad selection with SelectionBehavior
+  files:
+  - path: skills/gameplay/roblox-gui/SKILL.md
+  - path: skills/gameplay/roblox-gui/references/full.md
+  check:
+    type: property_exists
+    class: GuiBase2d
+    property: SelectionGroup
+  verified: 2026-10-14
+- id: keycode-string-format-abbreviated
+  claim: GetStringForKeyCode accepts Enum.KeyCodeStringFormat.Abbreviated
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  check:
+    type: enum_item_exists
+    enum: KeyCodeStringFormat
+    item: Abbreviated
+  verified: 2026-10-14
+- id: uis-get-image-for-keycode
+  claim: UserInputService:GetImageForKeyCode returns the platform icon for a key
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  check:
+    type: member_exists
+    class: UserInputService
+    member: GetImageForKeyCode
+  verified: 2026-10-14
+- id: cas-bindactivate-buttonr2
+  claim: Default control scripts bind ButtonR2 through ContextActionService:BindActivate
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  teaching_needles:
+  - BindActivate
+  check:
+    type: method_description_contains
+    class: ContextActionService
+    method: BindActivate
+    contains: ButtonR2
+  verified: 2026-10-14
+- id: tool-manual-activation-suppresses-bindactivate
+  claim: Tool.ManualActivationOnly suppresses BindActivate (gamepad R2) activation
+  files:
+  - path: skills/gameplay/roblox-input/SKILL.md
+  - path: skills/gameplay/roblox-input/references/full.md
+  check:
+    type: property_exists
+    class: Tool
+    property: ManualActivationOnly
+  verified: 2026-10-14

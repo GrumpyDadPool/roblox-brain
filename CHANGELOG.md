@@ -2,6 +2,13 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [2.3.1] - 2026-10-14
+
+### Fixed
+
+- The architecture field notes gave the wrong limit for `NumberValue`. The 9.22e18 ceiling belongs to `IntValue`, which holds a signed 64-bit integer. `NumberValue` holds a double: magnitude up to about 1.79e308, but whole numbers are stored exactly only to 2^53, about 9 quadrillion. Both engine definitions are linked.
+- The mirror snapshot regression tests wrote their fixtures in text mode and hashed a fixed LF byte string, so the suite reported a false identity mismatch on Windows. Fixtures now write the same bytes they hash, and the tests pass on every platform.
+
 ## [2.3.0] - 2026-10-14
 
 ### Added

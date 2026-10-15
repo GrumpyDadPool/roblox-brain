@@ -236,7 +236,7 @@ A brief tutorial or contextual tooltips can help. "No tutorial" is not a rule. T
 
 <!-- temporal: 2026-10 -->
 
-**Practitioner observation:** in the October 1, 2026 Tizzy Town seminar, NewFissy described D1 rising as concurrent players increased, then falling after the peak without a game change (31:05–32:00). He proposed social network effects: a busier game can offer more friends, opponents, and social reasons to return. This is a possible mechanism, not proof that scale alone raises retention or a documented ranking rule.
+**Field observation:** D1 can rise as concurrent players increase and then fall after the peak with no game change. That points at social network effects: a busier game can offer more friends, opponents, and social reasons to return. This is a possible mechanism, not proof that scale alone raises retention or a documented ranking rule.
 
 Before crediting an update or declaring a regression, compare mature acquisition cohorts, device/locale mix, seasonality, friend co-play, server occupancy, and matchmaking wait times. A change from paid to Home traffic can alter aggregate D1 without improving any cohort. If social density looks relevant, test better grouping or a solo fallback; do not buy more traffic merely to inflate CCU. See §2 for documented Home signals.
 
@@ -397,11 +397,11 @@ A live-game operator's process for shipping quality fast, from a producer who ru
 
 <!-- temporal: 2026-10 -->
 
-**Practitioner hiring heuristic:** NewFissy's October 1, 2026 seminar recommends Roblox-native experience for hands-on engineering, product, and game design, while describing outside artists and senior engineering managers as viable hires (56:40–58:06). Judge the role, not the applicant's origin: ask hands-on candidates to explain Roblox player expectations and device constraints; test artists' delivery against your actual asset pipeline; evaluate managers on technical judgment and team leadership. Pair outside specialists with someone who understands the platform. This is one studio operator's preference, not an exclusion rule.
+**Field-reported hiring heuristic:** a studio operator reports preferring Roblox-native experience for hands-on engineering, product, and game design, while describing outside artists and senior engineering managers as viable hires. Judge the role, not the applicant's origin: ask hands-on candidates to explain Roblox player expectations and device constraints; test artists' delivery against your actual asset pipeline; evaluate managers on technical judgment and team leadership. Pair outside specialists with someone who understands the platform. This is one studio operator's preference, not an exclusion rule.
 
 **Payment and rights are separate.** Before commissioning code, clothing, models, audio, or UI, record deliverables, payment milestones, permitted uses, modification rights, third-party components, and whether rights are assigned or licensed. Retain signed agreements and asset provenance outside chat accounts. Do not assume an invoice or access to source files establishes copyright ownership.
 
-**U.S. legal boundary:** copyright ordinarily starts with the author (17 U.S.C. §201); ownership of a copy does not itself transfer copyright (§202). A voluntary transfer of copyright ownership generally requires a writing signed by the rights owner or authorized agent (§204). Work-made-for-hire status is an exception with specific employee/commissioned-work requirements; adding that phrase to any contractor agreement does not automatically qualify it. A suitable license may meet the project's needs without an ownership transfer. Get jurisdiction-specific legal review for the agreement and any disputed rights; an agent should not draft assurances that an asset is legally cleared. Sources: U.S. Copyright Office, Chapter 2 and Circular 30 below. NewFissy's contractor anecdote (12:25–13:20) motivates the check, not the legal rule.
+**U.S. legal boundary:** copyright ordinarily starts with the author (17 U.S.C. §201); ownership of a copy does not itself transfer copyright (§202). A voluntary transfer of copyright ownership generally requires a writing signed by the rights owner or authorized agent (§204). Work-made-for-hire status is an exception with specific employee/commissioned-work requirements; adding that phrase to any contractor agreement does not automatically qualify it. A suitable license may meet the project's needs without an ownership transfer. Get jurisdiction-specific legal review for the agreement and any disputed rights; an agent should not draft assurances that an asset is legally cleared. Sources: U.S. Copyright Office, Chapter 2 and Circular 30 below. A contractor anecdote motivates the check, not the legal rule.
 
 ### Core-loop design
 
@@ -889,7 +889,7 @@ Condensed here; full detail in §11.5 Traps. D1/D7 has ~3-day reporting delay, o
 
 <!-- temporal: 2026-10 -->
 
-NewFissy recommends stopping ads when Home recommendation traffic starts rising (October 1, 2026 seminar, 79:27–80:52). This reinforces the existing §11.2 stop-ads heuristic, but uses an earlier trigger. It also conflicts with §4's advice not to stop ads mid-spike. Neither is a universal rule: paid acquisition can still be profitable or necessary to fill multiplayer sessions.
+A field-reported recommendation: stop ads when Home recommendation traffic starts rising. This reinforces the existing §11.2 stop-ads heuristic, but uses an earlier trigger. It also conflicts with §4's advice not to stop ads mid-spike. Neither is a universal rule: paid acquisition can still be profitable or necessary to fill multiplayer sessions.
 
 Treat rising Home traffic as a reason to test a budget reduction, not an automatic shutdown. Record paid and Home plays separately, spend, mature cohort retention, and server occupancy; avoid changing creative, gameplay, and budget together. Compare comparable days after allowing reporting lag and note whether organic play and session quality hold. Set a budget and recovery threshold before the test. A coincident organic rise does not prove ads caused or suppressed it, and a before/after comparison is not a randomized experiment. The official §2 model excludes externally acquired users' behavior from the Home ranking stage; do not teach that weak ad cohorts directly poison those ranking signals.
 
@@ -931,8 +931,6 @@ CONFLICT on plays vs engagement: engagement/HEP targeting gets fewer impressions
 - Moderation/questionnaire kill-shots: a moderation warning received *while* entering home recommendations can nuke traction permanently; the game gets "thrown to a different audience" and full-green stats collapsed in one day; content-maturity labels have been removed; warnings exist for off-platform links in bios (enforced); one game's CCU dropped by a third after being force-set all-ages. Scrub content/age-rating risks *before* pushing into algo. Maturity questionnaire answers have kill-shots: Roblox auto-flagged "chasing NPCs = violence" and locked a climbing 50-CCU game (headed to 20k) to 16+, gutting its audience; check how innocuous mechanics map to questionnaire categories before launch. Trend games die the same way: a maturity-questionnaire flag collapsed a horror game's CCU after ~700k R$ over 3 weeks.
 
 ## Sources
-
-Practitioner additions: NewFissy, *How to Start a Studio*, Tizzy Town, October 1, 2026 ([recording](https://drive.google.com/file/d/1BNAs1N8XCfl_d9Qq8vgukGZ82b5qncPj/view)). Timestamps identify the motivating observations; guidance is original synthesis, not a transcript or verified ranking formula.
 
 Commissioned-rights legal sources (U.S., reviewed 2026-10-02):
 - [Copyright ownership and transfer, 17 U.S.C. §§201–204](https://www.copyright.gov/title17/92chap2.html)

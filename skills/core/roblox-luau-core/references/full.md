@@ -92,6 +92,19 @@ Do not add a generic recursive deep-copy helper without defining how it handles 
 
 `table.freeze` prevents writes to that table, not recursively to all nested tables. Treat it as one boundary, not deep immutability.
 
+### Immutable updates via path copying
+
+Practitioner design, informed by [Kampfkarren’s guidelines](https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md); independently written here. For tree-shaped immutable state, clone each table along the changed path instead of deep-copying unrelated branches:
+
+```luau
+local settings = { audio = { volume = 0.8 }, video = { shadows = true } }
+local updated = table.clone(settings)
+updated.audio = table.clone(settings.audio)
+updated.audio.volume = 0.4 -- settings.audio.volume remains 0.8
+```
+
+Unchanged branches retain identity and can be shared only while they remain immutable. Cloning cost depends on the sizes of the tables copied, not just path depth. This is not a replacement for independent mutable snapshots: aliases and cycles need an explicit ownership policy. Existing deep-copy requirements for mutable player defaults still apply; see `roblox-data`.
+
 ## 4. Iteration and mutation
 
 Generalized iteration is valid Luau:
@@ -121,6 +134,8 @@ end
 ## 5. Scope, functions, and multiple values
 
 A local name is visible from its declaration onward. Code above a local declaration does not capture that later local.
+
+A `repeat … until` condition can see locals declared inside its body; those locals do not escape the loop. The body runs at least once, and the loop stops when the condition is **true**, unlike `while`. Source: [control structures](https://create.roblox.com/docs/luau/control-structures).
 
 ```luau
 local second
@@ -192,6 +207,17 @@ A dot does not add `self`. Define and call a function consistently. Constructors
 Metatable object design and lifecycle belong in `roblox-luau-patterns`.
 
 ## 7. Strings and patterns
+
+### Literal search, splitting, and byte-oriented operations
+
+Use existing [standard library](https://luau.org/library) functions before inventing parsing helpers:
+
+- `string.find(text, needle, 1, true)` performs literal search. Without the fourth argument, punctuation in the needle may act as pattern syntax. Prefer literal search for user-supplied search text.
+- `string.split(text, separator)` uses a literal separator, not a pattern; the default separator is comma. An empty separator splits **bytes**, not Unicode characters.
+- `string.reverse` reverses bytes and can corrupt UTF-8. `string.lower`/`upper` handle ASCII case, not international case folding. Do not use these as Unicode-aware display or name normalization.
+- `string.format` supports field width/precision, e.g. `%.2f`; it is not locale-aware number formatting.
+- `string.pack`/`unpack` provide binary strings; `packsize` reports a fixed format's size. Use an explicit layout and byte order rather than assuming host sizes. Prefer the existing `buffer` guidance when mutable binary storage is needed.
+
 
 Backtick interpolation and `..` concatenation are both valid:
 

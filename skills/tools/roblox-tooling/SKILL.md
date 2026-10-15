@@ -1,8 +1,12 @@
 ---
 name: roblox-tooling
 description: "Use when configuring Roblox tooling such as Rojo, Wally, pesde, Selene, StyLua, Lune, Rokit, luau-lsp, or CI/CD."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-04
 sources:
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/ScriptEditorService.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/ChangeHistoryService.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/InstanceFileSyncService.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/scripting/sync.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/Players.yaml
   - https://rojo.space/docs/
   - https://wally.run/
@@ -18,10 +22,6 @@ sources:
   - https://raw.githubusercontent.com/lest-luau/lest/main/docs/continuous-integration.md
   - https://raw.githubusercontent.com/UpliftGames/wally/main/src/resolution.rs
   - https://create.roblox.com/docs/llms.txt
-  - https://create.roblox.com/docs/reference/engine/llms.txt
-  - https://create.roblox.com/docs/cloud/llms.txt
-  - https://create.roblox.com/docs/llms-full.txt
-  - https://create.roblox.com/docs/reference/engine/deprecated.md
   - https://devforum.roblox.com/t/evolving-luau-oss-community-contributions-more/4566806
   - original
 ---
@@ -34,14 +34,12 @@ Load for filesystem workflows, tool/package pins, linting, sourcemaps, and CI.
 
 ## Quick Reference
 
-- Use Rojo when the source of truth should live in files and sync or build into Studio.
-- Use Wally only when the project wants package manifests and a lockfile; keep package scope and server/client placement explicit.
-- Pin tools with the project's existing manager; for a new project lead with Rokit (Aftman is archived, but Rokit reads existing `aftman.toml` projects).
-- Run Selene and StyLua in check mode in CI. Do not let a formatter rewrite a contributor's branch silently.
-- Use Lune for standalone Luau scripts or test helpers when its standard libraries fit the task.
-- Generate a Rojo sourcemap for editor tooling when the project needs Roblox-aware navigation.
-- CI must check test results and expected counts, not merely exit codes. Separate logic, file/HTTP, and engine suites; see full.md.
+- Rojo when files own the truth; Wally for manifests+lockfile (explicit realm). Pin tools via the project's manager; new projects lead with Rokit (Aftman archived, reads `aftman.toml`).
+- Selene + StyLua check-mode in CI (no silent rewrites); Lune for standalone Luau; Rojo sourcemap for editor tooling.
+- CI gates on parsed results and counts, not exit codes; split logic/file/HTTP/engine suites (full.md).
 
-**Source-of-truth first.** Identify Studio vs files before editing; never assume they match. `rojo syncback` pulls saved-place edits, not live two-way sync; preview with dry-run/list. Follow existing tooling; do not impose optional tools. TestEZ is archived: keep where used, not as a new default. See full.md §§1b–1c.
+**Source-of-truth first.** Know Studio vs files before editing; never assume sync. `rojo syncback` pulls saved-place edits, not live two-way sync — dry-run first. Don't impose optional tools. TestEZ archived: keep where used.
 
-**Need the details?** Load `references/full.md` for setup, file layout, and CI examples.
+**Script writes from plugin/MCP** go through `ScriptEditorService:UpdateSourceAsync` (raw `.Source` writes can clobber an open editor) + one `ChangeHistoryService` recording per bounded mutation. Script Sync conflicts resolve as Keep Studio vs Keep Disk — never assume either side wins. See full.md §§1b–1d.
+
+**Details:** `references/full.md` (setup, file layout, CI examples).

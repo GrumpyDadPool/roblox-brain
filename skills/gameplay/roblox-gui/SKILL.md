@@ -1,7 +1,7 @@
 ---
 name: roblox-gui
 description: "Use when building Roblox menus, HUDs, shops, notifications, dialogs, or responsive cross-platform UI."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-04
 sources:
   - https://create.roblox.com/docs/ui
   - https://create.roblox.com/docs/ui/position-and-size
@@ -9,7 +9,6 @@ sources:
   - https://create.roblox.com/docs/ui/list-flex-layouts
   - https://create.roblox.com/docs/input
   - https://create.roblox.com/docs/reference/engine/classes/GuiService
-  - https://create.roblox.com/docs/reference/engine/classes/GuiObject
   - https://create.roblox.com/docs/reference/engine/classes/ScreenGui
   - https://create.roblox.com/docs/projects/server-authority
   - https://create.roblox.com/docs/input/input-action-system
@@ -48,6 +47,7 @@ Load for HUDs, menus, shops, dialogs, notifications, or world-space UI.
 - Reactive UI: own per-screen cleanup separately from session state; repeat open/close to test leaks (full.md).
 - Server Authority: display confirmed inventory/currency; route gameplay input through Input Actions.
 - Resolve scrolling, text growth, clipping, and safe areas before polish.
+- TextBox submit, grids, truncation, RichText safety, and deprecated APIs: full.md.
 - Loading UI belongs in `ReplicatedFirst`; client character teleports are not readiness gates.
 
-> Layout and lifecycle examples: [references/full.md](references/full.md)
+> Details: [references/full.md](references/full.md)

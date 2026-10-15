@@ -1,10 +1,12 @@
 ---
 name: roblox-luau-core
 description: "Use for Luau language semantics, tables, control flow, string patterns, scope, closures, and cross-language translation errors."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-04
 sources:
   - https://luau.org/syntax
+  - https://create.roblox.com/docs/luau/control-structures
   - https://luau.org/library
+  - https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/libraries/vector.yaml
 ---
 
@@ -12,7 +14,7 @@ sources:
 
 ## When to Load
 
-Load for pure Luau syntax and semantics: truthiness, tables, iteration, functions, scope, operators, string patterns, and JS/Python ports. Routing: types → `roblox-luau-types`; ownership/lifecycle → `roblox-luau-patterns`; Roblox APIs → domain skills.
+Load for Luau semantics and JS/Python translation. Types: `roblox-luau-types`; lifecycle: `roblox-luau-patterns`; engine APIs: domain skills.
 
 ## Quick Reference
 
@@ -24,9 +26,9 @@ Load for pure Luau syntax and semantics: truthiness, tables, iteration, function
 - Dynamic keys require brackets: `record[field]`. Dot syntax uses a literal identifier.
 - Missing arguments become `nil`; extra results and arguments can be discarded.
 - Prefer an `if` expression over `condition and a or b` when `a` may be falsy.
-- Local names are scoped from their declaration onward. Forward-declare mutually recursive functions.
+- Locals start at their declaration; `repeat` locals reach `until`. Forward-declare mutual recursion.
 - Luau string patterns are not regular expressions. Their syntax and capabilities differ.
-- Backtick interpolation and `..` concatenation are both valid. Choose the clearer form; join many fragments once in a hot loop.
+- Backtick interpolation and `..` are valid. Join many fragments once in hot loops.
 - NaN does not equal itself and defeats `<`/`>`; test with `x ~= x`.
 - Binary data uses the `buffer` library: fixed size, 0-based offsets, explicit-width reads/writes. Avoid `buffer.readinteger`/`writeinteger` (stubs, not released runtime).
 - For Base64, hashing, or compression use `EncodingService` (buffers, not strings; JSON via `HttpService`). Details: see full reference.

@@ -69,6 +69,23 @@ Choose one sizing policy for each text region:
 
 Test long strings, empty strings, and missing images. A missing asset should produce a useful placeholder, not a layout collapse. Avoid putting essential game state only in color or iconography.
 
+### Truncation and overflow policy
+
+`TextWrapped` wraps text within the element; `TextTruncate` then controls what happens when even wrapped text does not fit:
+
+- `Enum.TextTruncate.None` (default): overflow is clipped silently.
+- `Enum.TextTruncate.AtEnd`: replaces overflow with `...`, cutting at a word boundary where possible.
+- `Enum.TextTruncate.SplitWord`: replaces overflow with `...` mid-word, using the space better for narrow cells.
+
+Truncation is per-line, not per-paragraph: with wrapping enabled it truncates the final visible line. Combine policies deliberately — e.g. a fixed-size inventory slot uses `TextWrapped = true` + `TextTruncate = AtEnd` so a long item name degrades gracefully, while a heading may use `TextScaled` bounded by `UITextSizeConstraint` instead. `TextFits` tells you whether the current text overflows, and `MaxVisibleGraphemes` can hard-limit displayed graphemes without reflowing the layout. Localized strings run longer than English on average; test truncation with a long translated string, not just with the source string.
+
+### RichText is a rendering mode, not a data format
+
+Enable `RichText` per object (`TextLabel`, `TextButton`, `TextBox`) and write markup into `Text` (`<b>`, `<i>`, `<font color="#FF7800">`, `<br/>`, escapes `&lt;`/`&amp;` for literal angle brackets). Two trust rules:
+
+- Never enable `RichText` for strings containing player input or other untrusted text. Markup tags in such strings render as styling, not characters — a player can inject `<font color="...">` to imitate system messages. Escape (`&lt;`) or strip before display; store plain text and apply tags only at render time from trusted code.
+- Localization strips rich-text tags from translated strings: re-apply tags to localized variants manually, or the formatting silently disappears in non-English locales.
+
 ## 5. Scrolling content
 
 A `ScrollingFrame` needs a clear canvas policy. For a vertical list, put a `UIListLayout` inside it and use `AutomaticCanvasSize = Enum.AutomaticSize.Y` when the project does not need to calculate canvas size manually.
@@ -88,6 +105,26 @@ list.Parent = scroll
 ```
 
 Do not nest an automatically growing scroll region inside another automatic scroll region unless the interaction is intentional and tested.
+
+## 5a. Grids of uniform cells (UIGridLayout)
+
+`UIListLayout` stacks children in one row or column. When cells should wrap and every cell shares one size, use `UIGridLayout` (inventory slots, icon palettes, card walls). Illustrative layout; test actual viewport sizes and content in Studio:
+
+```luau
+local grid = Instance.new("UIGridLayout")
+grid.CellSize = UDim2.new(0, 64, 0, 64)
+grid.CellPadding = UDim2.new(0, 8, 0, 8) -- default {0,5},{0,5}
+grid.SortOrder = Enum.SortOrder.LayoutOrder
+grid.Parent = inventoryFrame
+```
+
+`UIGridLayout` takes control of child `Size` and `Position`; per-child sizes are ignored unless a `UIConstraint` on the child overrides the grid's `CellSize` (a `UISizeConstraint` with a larger `MinSize` makes an element span multiple cells). Other knobs:
+
+- `FillDirectionMaxCells`: max cells per row/column before wrapping (0 = fill the parent's space; 1 = collapses the grid into a UIListLayout-like single column/row).
+- `StartCorner` (`Enum.StartCorner`): which corner layout starts from (default TopLeft; BottomRight for RTL or docked-right panels).
+- `FillDirection` (inherited from `UIGridStyleLayout`): `Horizontal` (default) or `Vertical`.
+
+Read-only `AbsoluteCellCount` and `AbsoluteCellSize` report the resolved layout. For true tabular data where a mid-row break is wrong (aligned columns of values), use `UITableLayout` instead; grids are for cells where wrapping after any item is acceptable.
 
 ## 6. UI state and server state
 
@@ -229,6 +266,19 @@ RS.RenderStepped:Connect(function()
 end)
 ```
 
+## 7a. Text entry: focus lifecycle and mobile submit
+
+A `TextBox` takes focus by click, tap, or gamepad selection; only then does keyboard input reach it.
+
+- `Focused` fires on gain (user input or `CaptureFocus()`); `FocusLost(enterPressed, inputThatCausedFocusLoss)` fires on loss — `enterPressed` distinguishes Enter-submission from clicking away. `:IsFocused()` and `UserInputService:GetFocusedTextBox()` check current state.
+- `:CaptureFocus()` when a dialog opens so the player need not tap the field first; `:ReleaseFocus()` (optionally `:ReleaseFocus(true)` to make the subsequent `FocusLost` report `enterPressed = true`) when something more important must reclaim keyboard input. `CaptureFocus` only works on the client — call it from a `LocalScript`.
+- `ClearTextOnFocus` defaults to true, which wipes existing text on refocus; set false for editable fields. `PlaceholderText`/`PlaceholderColor3` prompt the expected format. `MultiLine` lets Enter insert newlines (and thus never submits on Enter alone).
+- Mobile/console: `ReturnPressedFromOnScreenKeyboard` may also fire. Route it and Enter-submission from `FocusLost` through one deduplicated submit path; do not send the same request twice.
+
+Operator guidance: allow one submission per active edit/dialog attempt, reset that guard when a new attempt starts, and disable submission while a request is in flight. Test hardware Enter, on-screen Return, clicking away, and programmatic focus release on actual target devices.
+
+Filtering duty: any text sent to other players (chat, names, signs) must pass through `TextService:FilterStringAsync()` server-side before display to its intended audience; saved text must be filtered again when displayed — a `TextBox`'s `Text` is unfiltered player input. Never set `RichText = true` on a field that renders player-entered text: with `RichText` enabled the user edits the raw markup string, and unfiltered `<font ...>` tags become a spoofing vector, not a formatting feature.
+
 ## 8. Gamepad focus and selection
 
 Gamepad support is not complete when a button merely reacts to `Activated`. The player also needs a predictable focus path:
@@ -264,6 +314,27 @@ openTween:Play()
 ```
 
 If the object can be destroyed before the tween completes, connect cleanup to the owner's lifetime rather than assuming `Completed` will always run.
+
+### Deprecated tween/transparency APIs and their replacements
+
+Older code often animates UI with the deprecated `GuiObject` methods and mixed property. Migrate:
+
+- `TweenPosition`, `TweenSize`, `TweenSizeAndPosition` → `TweenService:Create()` on `Position`, `Size`, or both in one property table. `TweenService` is object-oriented and event-based (`Completed` event, cancellable, tweenable with `EasingStyle`/`EasingDirection`); the old methods return only a boolean and offer a completion callback at most.
+- `GuiObject.Transparency` → set `BackgroundTransparency` (background+border) and, for labels/buttons/text boxes, `TextTransparency` separately. The deprecated property mixes background and text transparency; avoid relying on its legacy coupling.
+- Also deprecated on the same class: `Draggable` → `UIDragDetector`; `BackgroundColor`/`BorderColor` (BrickColor) → `BackgroundColor3`/`BorderColor3`; `FontSize` → `TextSize`.
+
+```luau
+-- Before: frame:TweenPosition(UDim2.fromScale(0.5, 0.2), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.25, true)
+-- After:
+local TweenService = game:GetService("TweenService")
+TweenService:Create(
+    frame,
+    TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    { Position = UDim2.fromScale(0.5, 0.2) }
+):Play()
+```
+
+`TweenService` also handles what the old methods could not: tweening `BackgroundTransparency` and `TextTransparency` together for a true fade, or `CanvasGroup.GroupTransparency` for the whole subtree.
 
 ## Reactive UI libraries: scope, lifetime, and lists
 

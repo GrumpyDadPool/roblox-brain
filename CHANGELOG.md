@@ -2,6 +2,19 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [Unreleased]
+
+### Added
+
+- First-session onboarding traces alongside analytics funnels, with bounded collection, save ownership, privacy, retention, and offline analysis guidance.
+- Selected Luau API and state-design guidance informed by Kampfkarren's guidelines, written independently and distinguished from personal style preferences.
+- Reuse-first integration guidance for proven project modules, plus centralized Game Pass benefits and purchase refresh handling.
+- Subscription reconciliation, Robux transfer receipt handling, dynamic prices, and price-aware gifting guidance.
+- Feature-level threat modeling and Luau literal-search, Unicode, binary-string, and repeat-loop pitfalls.
+- Remote transport and bindable boundaries, cross-server receive limits, and shared MemoryStore quota planning.
+- Text-entry, grid layout, truncation, RichText safety, and legacy GUI API migration guidance.
+- Editor-safe source changes, undo recordings, Script Sync conflict handling, untrusted place-content boundaries, and asset-permission diagnosis.
+
 ## [2.2.0] - 2026-10-02
 
 ### Added

@@ -88,6 +88,22 @@ The bootstrap, not each module, should own global startup order. Avoid every mod
 
 Player removal is not a universal save or cleanup hook. It is one lifecycle signal. The canonical persistence layer owns save/release behavior, and each subsystem owns only its own player-keyed memory and connections.
 
+### Name what yields: the `Async` suffix
+
+Practitioner convention informed by [Kampfkarren’s guidelines](https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md), independently written here. Make possible suspension visible at the API boundary. An `Async` suffix (`loadProfileAsync`) is one useful convention; document whether the call yields or returns a promise. Respect existing naming contracts and do not rename public APIs merely for style. A suffix does not enforce behavior or remove yield restrictions.
+
+This is a naming convention, not an async framework. It coexists with promises, and with plain coroutines and `task.*` scheduling, without needing any library (practitioner design, not an engine rule).
+
+### Return arity: `nil` is a value, "nothing" is not
+
+`return` and `return nil` produce different results. A function that ends with bare `return` (or falls off the end) returns *no values*; `return nil` returns *one value, nil* — and the difference is visible when forwarding or counting results.
+
+For fixed result contracts, keep the number of returned values consistent. A `(value, errorMessage)` API should return two values on every path, such as `return nil, message` or `return value, nil`. Ordinary assignment pads missing values with nil, but forwarding multiple results or counting them exposes the difference. Variable-result APIs can be intentional; document them rather than imposing fixed arity universally.
+
+### Return a named variable from modules
+
+Practitioner preference: a named local export can make a module easier to search and annotate. Prefer it when that helps readability, not as a correctness rule. Anonymous returns remain valid, including established story/spec conventions. This adds no new wrapper or abstraction.
+
 ## 4. Instance visibility and ancestry
 
 Configure before parenting when descendants, listeners, plugins, or replication should observe only a complete object.
@@ -266,6 +282,9 @@ Static searches for `:Destroy(`, `:Disconnect(`, `Janitor`, `Maid`, or wait call
 - Startup order is explicit where order matters.
 - Every connection, task, and created instance has an owner and endpoint.
 - Successful `nil`, thrown errors, cancellation, timeout, and retry exhaustion stay distinct.
+- Return arity is consistent across all branches: a function returning `(value, error)` never falls back to a bare `return`.
+- Possible yields are visible in naming or documentation; existing API contracts are preserved.
+- Named module exports are used where they improve readability, not enforced as a blanket style rule.
 - Retried operations are safe to repeat or idempotent.
 - Partial instance visibility is intentional.
 - No new manager class, framework, or dependency exists only to namespace one feature.

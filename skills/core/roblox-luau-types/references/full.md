@@ -105,6 +105,27 @@ data.guild = "Warriors"
 -- from a function, or when its declaring scope exits.
 ```
 
+### Indexer values that can be absent
+
+Practitioner design informed by [Kampfkarren’s guidelines](https://raw.githubusercontent.com/Kampfkarren/kampfkarren-luau-guidelines/main/README.md), written independently. The same source informs static requires and literal-union guidance below; these are design recommendations, not universal style requirements.
+
+Indexing a dictionary with a key that has no value returns `nil` at runtime, but an indexer typed `{ [K]: V }` presents every read as a plain `V` — the type checker never sees the `nil`, so a missing key slips through and errors at runtime. Whenever any key may be absent (per-player counters, caches, records read back from storage), type the value `V?` so the checker forces a nil check:
+
+```luau
+local points: { [Player]: number? } = {}
+
+local function addPoints(player: Player, amount: number)
+    local current = points[player]
+    if current == nil then
+        points[player] = amount
+    else
+        points[player] = current + amount
+    end
+end
+```
+
+With `{ [Player]: number }` instead, `current` reads as `number` and `current + amount` type-checks even though it errors for a player with no entry yet (verified with `luau-analyze` under `--!strict`, 2026-10). Reserve the non-optional indexer `{ [K]: V }` for tables where every key you will ever index is guaranteed present.
+
 ## Union and Intersection Types
 
 ```luau
@@ -254,6 +275,50 @@ end
 - Keep implementation types internal (don't export helper types only used inside)
 - Choose signatures that let callers infer types cleanly without needing to import the alias
 - A well-typed module surface acts as documentation
+
+### Static requires: the type information lives in the path
+
+Keep `require` targets statically resolvable by the project’s analyzer. With Roblox-aware tooling and the correct sourcemap, a path such as `require(ReplicatedStorage.Packages.React)` lets the analyzer resolve module types. Computed loader paths can lose that information:
+
+```luau
+-- static: the checker resolves the module and all its exported types
+local React = require(ReplicatedStorage.Packages.React)
+
+-- dynamic: values become any (and error outright in strict mode)
+local modules = {}
+for _, moduleScript in Modules:GetChildren() do
+    modules[moduleScript.Name] = require(moduleScript)
+end
+```
+
+With the loop version, every value read out of `modules` is `any`: no autocomplete, no exported types, and any mistake in how a module is used surfaces at runtime instead of at analysis (verified with `luau-analyze` under `--!strict`, 2026-10: a `require` whose argument is not a static path reports "Unknown require: unsupported path"). If a module collection is genuinely needed, list the requires explicitly and build the registry from static requires — the few extra lines preserve the entire type chain.
+
+The same rule protects the consumer side: when one module re-exports another, require the original statically and pass the value through, rather than re-requiring through a computed path.
+
+### String-union enums: catch invalid values statically
+
+For a game-owned closed vocabulary, a string-literal union makes invalid values detectable statically. A `never` assignment checks that all alternatives were handled. This does not replace Roblox engine enums or a project’s already well-typed representation:
+
+```luau
+type Phase = "lobby" | "running" | "intermission"
+
+local function phaseLabel(phase: Phase): string
+    if phase == "lobby" then
+        return "Waiting"
+    elseif phase == "running" then
+        return "In progress"
+    elseif phase == "intermission" then
+        return "Between rounds"
+    else
+        local impossible: never = phase
+        return impossible -- type error here if a Phase value was not matched above
+    end
+end
+```
+
+Adding another alternative, or removing the intermission branch, leaves a non-`never` value at the final assignment and produces a type error. Check this with the project’s analyzer and solver; the assignment deliberately turns an unhandled case into a static diagnostic.
+
+Avoid an enum factory that erases literal information into `any` or broad `string` types. A typed table or existing library can also preserve useful static contracts; inspect its actual types rather than rejecting it by category. Runtime-extensible registries need a separate validation contract.
 
 ## Common Roblox Types
 
@@ -420,10 +485,13 @@ Roblox-only compiler feature: server-side scripts compile to machine code instea
 - Expecting `:` method definitions to automatically share precise `self` type across the class
 - Using `::` to force unrelated conversions instead of fixing underlying type design
 - Building unions without a discriminant, making downstream refinement difficult
+- Indexer dictionaries typed `{ [K]: V }` while missing keys are indexed at runtime; type the value `V?` where absence is expected (see Table Types)
+- Annotating untrusted remote/DataStore payloads as already validated, or casting `unknown` to the desired type without runtime checks. Accept `unknown`, validate and narrow it, then pass the checked value onward.
 - Narrowing a table field and holding the refinement across calls that may write the field; copy the field to a local and narrow the local instead
 - Using intersections between incompatible primitives (`string & number`)
 - Annotating every local variable (noise that hides the important annotations)
 - Exporting internal helper types that clutter the module's public surface
+- Building enums with `makeEnum`-style libraries or lookup tables when a string-literal union would catch invalid values at analysis time
 
 ## Solver Migration Rules
 

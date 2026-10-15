@@ -21,16 +21,14 @@ Load for leaderboards, messaging, MemoryStore coordination, world state, seasons
 ## Quick Reference
 
 ### OrderedDataStore (Leaderboards)
-- Sortable DataStore. Keys are strings (`tostring(UserId)`); values are integers used for sorting.
-- `GetSortedAsync(ascending, pageSize, minValue, maxValue)` → sorted pages
-- `BatchGetAsync(keys)`: multi-key read, ordered stores only; missing keys are omitted
-- Budget: poll `GetRequestBudgetForRequestType(OrderedWrite)` before bursts (per server: 30 + numPlayers x 5 writes/min)
-- For leaderboards only, never for player saves
-- Keep the user ID a static substring in keys (`player_<UserId>`) so RTBF templates match; hashed keys make erasure manual
+- Sortable DataStore: string keys (`tostring(UserId)`), integer sort values; `GetSortedAsync` → pages; `BatchGetAsync` multi-key read (missing keys omitted).
+- Budget bursts via `GetRequestBudgetForRequestType(OrderedWrite)` (per server: 30 + numPlayers×5 writes/min).
+- Leaderboards only, never player saves. Keep `player_<UserId>` a static key substring so RTBF templates match.
 
 ### MessagingService (Cross-Server)
-- `SubscribeAsync` / `PublishAsync`; no delivery or ordering guarantee, so design for idempotency.
-- Request/response: `{reqId}` correlation, ack on the topic, timeout. No ack ≠ not executed — replay the same reqId, don't double-grant.
+- `SubscribeAsync` / `PublishAsync`; no delivery or ordering guarantee — design for idempotency.
+- Request/response: `{reqId}` correlation + ack + timeout; no ack ≠ not executed — replay same reqId, don't double-grant.
+- Budget broadcast receives, not just sends; limits and polling trade-offs: full.md. <!-- temporal: 2026-10 -->
 
 ### GlobalDataStore (Shared State)
 - Persistent non-player state (guilds, seasons, counters). Use `UpdateAsync`; never for player session data.
@@ -38,17 +36,16 @@ Load for leaderboards, messaging, MemoryStore coordination, world state, seasons
 ### MemoryStoreService (Temporary Coordination)
 - Queues and sorted maps for expiring matchmaking, leases, coordination.
 - Remove a read batch only after successful, idempotent processing.
-- Sorted-map paging: last item's `{key, sortKey}` = next exclusive bound.
+- Sorted-map paging: last item's `{key, sortKey}` = next exclusive bound. Quotas are **game-level** (one shared pool): request units 1000+120×CCU/min, memory 64 KB+1.2 KB/user, value ≤32 KB, TTL 45 days; batch calls bill per item. <!-- temporal: 2026-10 -->
 
 ### Cross-Server Patterns
-- Register servers with expiring heartbeats; use MessagingService for notifications.
+- Register servers with expiring heartbeats; notify via MessagingService.
 
 ### User Identity
-- New code identifies users with `player.User` (`User.Id`, `DomainType`, `DomainId`); `UserId` stays valid. Domain IDs are per-experience, so keep cross-server keys on `UserId` and never mix the two.
+- Identify users with `player.User` (`User.Id`, `DomainType`, `DomainId`); `UserId` stays valid. Domain IDs are per-experience: key cross-server data on `UserId`.
 
 ### Pitfalls
-- MessagingService: fire-and-forget, unordered, cross-server latency; not for time-critical work
+- MessagingService: fire-and-forget, unordered; not for time-critical work
 - GlobalDataStore: same rate limits as player DataStores
-- Never store Instances; serialize to primitives first; `SetAsync` overwrites — use `UpdateAsync` for shared counters
-
+- Never store Instances; `SetAsync` overwrites — use `UpdateAsync` for shared counters
 > Store selection and workflows: [references/full.md](references/full.md)

@@ -1,9 +1,10 @@
 ---
 name: roblox-building
 description: "Use when building geometry, maps, props, or generated assets with MCP or standalone Luau."
-last_reviewed: 2026-08-31
+last_reviewed: 2026-10-04
 sources:
   - original
+  - https://create.roblox.com/docs/en-us/projects/assets/privacy.md
   - https://devforum.roblox.com/t/large-scale-roblox-terrain-the-ultimate-guide/405672
   - https://devforum.roblox.com/t/a-complete-guide-to-editableimages/3858566
   - https://create.roblox.com/docs/reference/engine/classes/EditableImage
@@ -25,36 +26,33 @@ Load for geometry, props, maps, and spatial onboarding via MCP or Luau.
 ## Quick Reference
 
 ### MCP Build Mode
-1. Inspect Studio, Workspace, and existing assets.
-2. Name the root, origin, dimensions, and assets.
-3. Build in phases; read back each batch.
-4. Verify the tree, view, and traversal.
+1-2. Inspect Studio/Workspace/assets; name root, origin, dimensions, assets.
+3-4. Build in phases with readback; verify tree, view, traversal.
 
 ### Asset Choice
-- Search project assets and Toolbox before generating. Check type, creator, price, scripts, and fit.
-- Before paid or cross-owner insertion, disclose creator, ID, price, and rights. Inspect scripts and dependencies; remove unneeded code and test in scene. See `roblox-security`.
+- Search project assets and Toolbox first; check type, creator, price, scripts, fit.
+- Paid/cross-owner insertion: disclose creator, ID, price, rights first. Inspect scripts/dependencies; remove unneeded code. See `roblox-security`.
 - MCP: `generate_procedural_model`, `generate_mesh`, `generate_material`.
-- Studio Assistant previews models, restyles textures, and segments imported meshes. These aren't confirmed MCP tools; see full reference.
 - Check mesh bounds, collision, PBR, and quality levels.
 - Use permitted images; wait for jobs to finish.
-- `EditableImage`/`EditableMesh` have permission and memory limits.
-- Use native Parts/CSG when reuse or generation is unsuitable.
+- `EditableImage`/`EditableMesh`: permission + memory limits.
+- Native Parts/CSG when reuse/generation is unsuitable.
+- **Asset privacy:** new accounts/groups create Images/Decals/Meshes Restricted — blank texture/invisible mesh usually means a missing grant, not corruption. Read the Output error; grant the experience in Creator Dashboard. See `roblox-studio-mcp`.
 
 ### Player Scale
 Player ~5 studs | Door 4w×7h | Ceiling 10-14 | Counter 3.5-4 | Seat 1.5 | Path 6+
 
 ### Spatial Rules
-- Name dimensions; offset sub-parts from anchor CFrames, not guessed world coordinates.
-- Snap to 0.125/0.25/0.5 studs.
-- Build complex CSG near origin, then `PivotTo` the destination.
-- Set anchoring, collision, shadows, color, and material explicitly.
+- Name dimensions; offset sub-parts from anchor CFrames, never guessed world coordinates.
+- Snap to 0.125/0.25/0.5 studs. Build complex CSG near origin, then `PivotTo` the destination.
+- Set anchoring, collision, shadows, color, material explicitly.
 
 ### Acceptance
-**Prop:** named model, pivot, scale, bounds, materials, collision, anchoring, no loose parts, asset provenance.
-**Map:** root/origin, zones, landmarks, spawns/return paths, path widths, traversal, and bounds checks excluding Baseplate/Terrain/SpawnLocation.
-**Evidence:** readback, a view when supported, and playtest results.
+**Prop:** named model, pivot, scale, bounds, materials, collision, anchoring, no loose parts, provenance.
+**Map:** root/origin, zones, landmarks, spawns/return paths, traversal, bounds excluding Baseplate/Terrain/SpawnLocation.
+**Evidence:** readback, view when supported, playtest results.
 
 ### Anti-Patterns
-Guessing coordinates | unanchored or duplicate parts | hardcoded world positions | silent CSG failure | oversized batches | claims without readback
+Guessing coordinates | unanchored/duplicate parts | hardcoded world positions | silent CSG failure | oversized batches | claims without readback
 
-**Details:** `references/full.md` covers maps, validation, and assets.
+**Details:** `references/full.md` (maps, validation, assets).

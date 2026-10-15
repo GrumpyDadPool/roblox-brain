@@ -1,7 +1,7 @@
 ---
 name: roblox-security
 description: "Use when auditing Roblox code for exploit vectors, authority models, remotes, economy, and DataStore flows."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-04
 sources:
   - https://create.roblox.com/docs/ui/text-filtering
   - https://create.roblox.com/docs/scripting/security/security-tactics

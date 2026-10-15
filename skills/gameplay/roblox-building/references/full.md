@@ -437,3 +437,14 @@ Server scripts can also create and configure prompts programmatically; `TriggerE
 - [Large-Scale Roblox Terrain: the ultimate guide](https://devforum.roblox.com/t/large-scale-roblox-terrain-the-ultimate-guide/405672) (84k views): still the terrain-at-scale reference.
 - [Realistic oceans via mesh deformation](https://devforum.roblox.com/t/realistic-oceans-using-mesh-deformation/1159345); [greedy meshing explainer](https://devforum.roblox.com/t/consume-everything-how-greedy-meshing-works/452717).
 - [Free texture sites](https://devforum.roblox.com/t/free-texture-sites/70131) (174k views); [City Loader plugin](https://devforum.roblox.com/t/city-loader-plugin-templates-for-real-life-buildingscities-in-studio/696886).
+
+## Generated-map and interaction regression checks
+
+- After a representative room or map is approved, record its reusable dimensions, materials, prop sourcing, lighting, traversal and validation choices before building siblings. Keep the approved reference intact unless its changes are requested.
+- After resizing or changing layout dimensions, revalidate dependent walls, floors, foundations, openings, fences, prop offsets, spawns, and activity zones. Inspect joins and exterior boundaries from player height as well as overview cameras; fix the generator when generated geometry is wrong.
+- Scan for unintended coincident faces and overlapping trim across the complete generated scene, then inspect corners, door lintels, floor/ceiling seams and junctions in motion. An automated overlap report is a candidate list, not proof that the scene is free of flicker or gaps.
+- Traverse doorways, ladders, hatches, landings, and return routes with representative supported avatars in the installed geometry. Check entry, body clearance, and stepping off both ends. Treat nominal dimensions as planning estimates, not traversal proof.
+- Compare maps with the same definition of accessible floor, obstacle clearance, ceiling height, connectivity, and camera conditions. Inspect the extraction method before comparing results. Outer bounding boxes and similar area do not establish similar playable space or spaciousness.
+- Match an activity's eligibility zone to the visible area players understand as part of it, including where its interaction can actually activate. Exercise all edges; define separate entry/exit thresholds where jitter would repeatedly revoke equipment or reset progress. Record exit causes separately.
+- Before reusing a cloned prop, inspect its tags, attributes, prompts, scripts, references, and descendants. Confirm only the intended discovery systems attach behavior; appearance alone does not establish a clean clone.
+- Derive rebuild bounds from canonical geometry, excluding earlier generated barriers, helpers, and validation zones. Run the generator twice on a temporary copy and compare instance counts, dimensions and behavior; repeated regeneration must not expand its own input bounds.

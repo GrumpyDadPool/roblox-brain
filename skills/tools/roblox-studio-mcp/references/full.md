@@ -414,3 +414,13 @@ If a call fails with "not found", an invalid context, a stale session, or an una
 3. Turn on "Enable Studio as MCP server"
 
 Quick connect supports: Antigravity, Codex CLI, Claude Code, Claude Desktop, Cursor, Gemini CLI, and Visual Studio Code.
+
+## Verification identity, controls, and cleanup
+
+- Once Studio automation is authorized, perform supported routine actions through the connected bridge. If a required operation is unavailable, report the observed capability gap and the smallest remaining manual step. Do not infer availability from the bridge name alone.
+- Before multiplayer assertions, read each client's local player identity and associate it with the server player, evaluation context, window, input target, and screenshot. Numeric client labels are not evidence of that mapping. If two contexts reach the same client, mark other-client assertions unverified and use an independent observation path.
+- Before synthetic clicks or taps, establish the capture dimensions, viewport dimensions and origin, inset handling, and input units. Calibrate on a known control and confirm its state changes. Do not reuse a scale factor from a different capture or simulator setup.
+- Report layout inspection, direct handler execution, synthetic input, and hardware input as separate evidence. A handler call does not test hit testing; a misplaced synthetic pointer does not demonstrate a broken button.
+- Record admin modes, forced roles, paused timers, preview profiles, and hooks that change the scenario. Reproduce on the normal gameplay path before diagnosing a product bug. Remove overrides and confirm fresh runtime code before retesting.
+- Pair a negative visibility test with a positive control through the production path: test an unobstructed target in view as well as blocked and offscreen cases. Inspect the rendered result, not only an enabled flag or projection boolean.
+- Save user-facing edit-camera and temporary inspection state before changing it. Restore the state the inspection owns on success, failure, and cancellation, then confirm the viewport is navigable. Do not unconditionally overwrite a newer camera owner.

@@ -629,3 +629,10 @@ end)
 - **Bypassing `ContextActionService` because it "feels indirect."** Most gameplay bindings should use CAS: it correctly handles chat/text-box conflicts for free.
 - **Auto-creating touch buttons beyond the 7 limit.** BindAction silently refuses to create the 8th button.
 - **Using `gameProcessedEvent` to filter CAS handlers.** CAS doesn't pass `gpe` to its handlers; by design, CAS handles conflicts itself.
+
+## Input transition regression checks
+
+- Specify press, hold, release, cancellation, and queued-action behavior around cooldown readiness. Test presses just before readiness, holds crossing readiness, rapid re-presses, and interrupted holds on every supported input. Observe client and authoritative state together; diagnose silent failures before changing charge timing.
+- Distinguish a valid release from interruption and cancellation. Keep the action's origin and state explicit so a stale release cannot complete a newer hold. A missed event hypothesis needs a reproduced input trace, not a timing guess.
+- Walk through adjacent automatic-selection triggers at normal movement speed. Check repeated swaps and conflicting grants before interpreting repeated selection events as player confusion. Use spatial separation, cooldown, or explicit selection only as the agreed mechanic requires; retest the retained walk-up path.
+- Separate initial role presentation from active-play role transfer or revival. Verify a human recipient can still move, aim, and use required touch actions during a mid-round update; a bot recipient skips client paths. Retest ordinary round-start presentation after separating the paths.

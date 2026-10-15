@@ -275,3 +275,12 @@ end)
 - **Volume > 1**: Causes clipping/distortion. Keep ≤ 1. Use SoundGroup volume for amplification.
 - **Using legacy system for voice chat integration**: The new AudioPlayer/Wire system is required for voice chat features (AudioDeviceInput, AudioSpeechToText).
 - **No SoundGroup hierarchy**: Without groups, players can't independently control music vs SFX volume in settings.
+
+## Review and regression checks
+
+- Give subjective review candidates stable names or slots and freeze their source, pitch, speed, offset, and effects while comparing them. Record the selected settings before adding random variation.
+- Listen to the actual requested cue and its in-game use. Successful loading, a filename, or measured loudness does not establish sound identity or acceptable feel. If listening is unavailable, keep that acceptance check explicitly unverified.
+- Inspect a cropped cue's start, attack, peak, release, and tail. Use suitable fades or adjusted slice points where a hard boundary produces a click or abrupt cutoff; audition every derived cue at its actual playback settings. Do not apply one fade duration blindly to all recordings.
+- Test each configured action slot and the full preview sequence: windup, charge, release, travel or near miss, impact, and kill where present. Confirm the correct cue plays in each slot and that previews use the intended nonspatial or spatial mix. A shared refactor must preserve deliberately distinct cosmetic overrides.
+- Reproduce loudness complaints from the listener's actual position and event path. Check launch, passing near the listener, impact, and victim-local playback separately. Align the perceived attack and peak with the visual event; removing leading silence alone may leave a slow buildup.
+- Validate an audio-review tool using known clips, including silence and a known signal, before trusting its descriptions. Use direct measurements for timing and perceptual review for identity/feel; record the tool's demonstrated limits and retain owner listening when needed. Do not infer capability from a model label or a successful request.

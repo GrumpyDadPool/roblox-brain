@@ -574,3 +574,9 @@ Top-sorted DevForum canon for networking libraries. Verify status in-thread; sev
 - Remote tooling: [Packet](https://devforum.roblox.com/t/packet-networking-library/3573907) (2025), [Warp](https://devforum.roblox.com/t/warp-very-fast-powerful-networking-library/2779813) (2024), [BridgeNet](https://devforum.roblox.com/t/bridgenet-insanely-optimized-easy-to-use-networking-library-full-of-utilities-now-with-roblox-ts-v199-beta/1909935) (legacy).
 - Case study: [60x bandwidth reduction in Astro Force](https://devforum.roblox.com/t/how-we-reduced-bandwidth-usage-by-60x-in-astro-force-roblox-rts/1202300), the practical RTS-scale optimization write-up.
 - [StreamX is DEPRECATED](https://devforum.roblox.com/t/deprecated-streamx-reduce-lag-and-prevent-map-cloning/1992484): do not recommend; example of a once-canonical library that died.
+
+## Resolve accepted combat outcomes before consequences
+
+Resolve target eligibility and damage interception in the authoritative combat owner before sending death presentation, granting hit rewards, or applying attacker penalties. Return an explicit rejected, survived, or eliminated outcome as appropriate to the game's rules. A raycast or physics contact is only a candidate hit; a shield or remaining life can turn an accepted contact into a survived outcome.
+
+Test invalid targets, protected targets, nonlethal accepted hits, and final hits through both human and bot attack paths. Observe the victim's own client and the attacker's consequences. A surviving player must not receive a lethal camera/control path, and a rejected contact must not apply a penalty meant for a valid hit.

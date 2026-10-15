@@ -2,7 +2,7 @@
 name: roblox-server-data
 description: "Use when building or fixing Roblox cross-server data: OrderedDataStore leaderboards, MessagingService, MemoryStore, world state, seasons."
 when_to_use: "Also for global leaderboards, cross-server announcements or events, matchmaking queues, shared counters, and reviewing non-player persistence."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/MemoryStoreSortedMap
   - https://create.roblox.com/docs/reference/engine/classes/OrderedDataStore
@@ -11,6 +11,7 @@ sources:
   - https://create.roblox.com/docs/reference/engine/classes/DataStoreService
   - https://create.roblox.com/docs/cloud-services/data-stores/right-to-be-forgotten
   - https://create.roblox.com/docs/cloud-services/data-stores/error-codes-and-limits
+  - original
 ---
 
 # Roblox Server & Shared Data

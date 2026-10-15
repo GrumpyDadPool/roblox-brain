@@ -448,3 +448,9 @@ Top-sorted DevForum canon for language patterns. These are the posts experienced
 - [Avoiding wait() and why](https://devforum.roblox.com/t/avoiding-wait-and-why/244015): origin of the `task.*` canon.
 - [Pcalls: when and how](https://devforum.roblox.com/t/pcalls-when-and-how-to-use-them/393687) (658 likes); [Promises and why](https://devforum.roblox.com/t/promises-and-why-you-should-use-them/350825) for the Promise library.
 - Framework design: [Writing an FPS framework](https://devforum.roblox.com/t/writing-an-fps-framework-2020/503318) (+ part 2), the most-cited architecture walkthrough; [Server Authority: How to Begin?](https://devforum.roblox.com/t/server-authority-how-to-begin/4139185) (2025).
+
+## Prevent work creation during teardown
+
+Mark an owner closing before destroying entities or releasing resources that can trigger callbacks. Gameplay, death, removal, and deferred handlers must distinguish normal play from teardown and must not register new work with a cleanup owner that is already cleaning. Inspect the actual cleanup library's reentrancy contract.
+
+Test normal completion, forced teardown with live entities, last-player departure, and shutdown. Observe callbacks rather than assuming destruction produces a particular gameplay event. Keep cleanup idempotent and reject stale scheduled work after the owner has closed.

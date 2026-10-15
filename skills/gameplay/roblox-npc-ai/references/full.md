@@ -483,3 +483,9 @@ npcHumanoid:ApplyDescription(desc)
 ## Legacy tools: HopperBin (deprecated)
 
 `HopperBin` is the pre-2013 ancestor of `Tool`: drop it in `StarterPack` and the player auto-equips it. It is deprecated; do not use it for new work. Migrate to `Tool` (parent to `Backpack` / equip via `Humanoid:EquipTool`) or to a prompt-based interaction (`ProximityPrompt`) for non-held abilities. Do not wire `HopperBin`-era events (`Bin.Selected`/`Bin.Deselected` are the old API) into new systems; only tolerate HopperBins when preserving a legacy place file.
+
+## Group decisions and navigation progress
+
+Observe the whole bot group after a shared event such as a dropped item or threat change. Independent greedy choices can converge on the same objective or escape point. Where the design calls for it, allocate a claimant for scarce objectives and vary escape preferences; test the group rather than only one successful path.
+
+Give fixed objectives a bounded no-progress policy and a temporary rejection/retry rule. Define a different replan/progress policy for moving chase targets, whose movement can invalidate a path or erase apparent distance gains. Test vertical separation, an inaccessible fixed objective, a fleeing target, and recovery after the world changes. Measure actual movement and progress; a chase state label is not evidence that navigation works.

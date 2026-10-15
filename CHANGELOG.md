@@ -19,6 +19,14 @@ All notable changes to `roblox-brain` are documented here.
 - `roblox-input`: hybrid-device presentation from `PreferredInput`, touch action buttons (touch ownership, placement from the jump button), a single gameplay input gate, cancelling held actions without firing, gamepad tool activation and center aim, platform button hints, and a cross-device input test checklist.
 - Drift-registry entries for the new API claims.
 
+- Verification and agent-workflow lessons distilled from a full development cycle of a shipped round-based game (build, launch, live ops), each traced to a recorded correction or bug and checked against official docs:
+  - `roblox-collaboration-mode`: checkable collaboration rules (skill checks before "done", evidence-linked advice changes, persistent observation logs, preserving approved baselines, verifying delegated work).
+  - `roblox-studio-mcp`: multiplayer client identity, input-coordinate calibration, separating handler/synthetic/hardware evidence, test-override hygiene, positive visibility controls, camera cleanup.
+  - `roblox-publish-checklist`: close the release against the version actually serving players; dependency inventories; a player-state × round-event transition matrix.
+  - `roblox-tooling`: release isolation, generated-tree replacement checks, targeted reverts and historical-build rollbacks.
+  - `roblox-analytics`: data freshness, observation maturity and censoring, denominators, optional-task and exit-cause semantics, exact retention definitions, collection-to-report audits, and custom experiment assignment checks.
+  - Regression checks for `roblox-architecture`, `roblox-audio`, `roblox-building`, `roblox-input`, `roblox-gui`, `roblox-data`, `roblox-server-data`, `roblox-networking`, `roblox-camera`, `roblox-physics`, `roblox-npc-ai`, `roblox-game-design`, `roblox-luau-patterns`, `roblox-security`, `roblox-animation-vfx`, and `roblox-monetization`.
+
 ### Changed
 
 - Every skill's description now triggers on changing, fixing, debugging, reviewing and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases users actually type ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). Hosts that list skills by description now match bug reports and audit requests.

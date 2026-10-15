@@ -8,6 +8,7 @@ sources:
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/projects/assets/privacy.md
   - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/parts/procedural-models.md
   - https://create.roblox.com/docs/reference/engine/classes/ProceduralModel
+  - original
 ---
 
 # Roblox Studio MCP

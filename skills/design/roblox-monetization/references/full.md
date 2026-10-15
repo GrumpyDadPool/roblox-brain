@@ -232,3 +232,21 @@ Keep test product IDs and test entitlements out of production configuration.
 - [ ] Policy and eligibility checks use current official documentation.
 - [ ] Prices, cadence, contents, and disclosures are visible before purchase.
 - [ ] Failures leave the receipt retryable instead of silently acknowledging it.
+
+## Catalog eligibility and deferred fulfilment
+
+### Separate catalog and purchase states
+
+Define display, selection, acquisition, purchase, ownership, and equip eligibility separately. An earn-only reward can remain visible with its actual acquisition path while the server rejects an invalid purchase. Test card creation, retained selection, action labels, ownership changes, and equipping together; a hidden card cannot exercise its existing acquisition-button code.
+
+### Isolate optional diagnostics
+
+Optional telemetry must not break an authoritative grant, trigger a duplicate grant, or cause an owed entitlement to disappear. Keep grant/idempotency state inside its established durable transaction boundary and isolate diagnostic failures from that result. Inject a telemetry failure into the purchase test; a successful counter test does not verify grant safety.
+
+### Settle delayed entitlements deliberately
+
+Model reserved, started, confirmed-delivered, cancelled, and recoverable states for paid effects. Identify operations bought with saved credits as well as those with receipt IDs; retries and duplicate callbacks must find the same authoritative operation.
+
+Define the effect-delivery boundary and the recovery policy for a started operation whose outcome is unknown. Do not promise exactly-once world execution when effect delivery and persistence cannot commit atomically. Do not refund merely because the buyer leaves if an already-running effect can still complete. Do not mark an effect delivered after shutdown cancellation prevented it from running.
+
+Test disconnect before and after start, explicit cancellation, duplicate completion, crash-left saved state, rejoin recovery, and shutdown ordering. Verify the actual owed entitlement after each case through the real save validator and grant owner; see `roblox-data`. Keep fulfilment of the game's owed item or credit distinct from a platform payment refund.

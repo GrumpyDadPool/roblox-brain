@@ -11,6 +11,9 @@ sources:
   - https://create.roblox.com/docs/projects/server-authority/techniques
   - https://create.roblox.com/docs/reference/engine/classes/Players
   - https://create.roblox.com/docs/scripting/capabilities
+  - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/Player.yaml
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/SocialService.yaml
 ---
 
 # Roblox Security
@@ -39,7 +42,7 @@ Load for authority, remote abuse, economy, saves, bans, or sandboxing audits. Re
 
 ### Enforcement
 
-Enforcement is a product decision with appeal implications, not an automatic response. The native ban API is server-only (`Players:BanAsync` / `UnbanAsync` / `GetBanHistoryAsync`; `Players.BanningEnabled` must be on). `Duration` `-1` is permanent, `0` and other negatives are invalid; `DisplayReason` max 400 chars (filtered); `PrivateReason` max 1000, never client-shared; `ApplyDeviceBlock` lasts 24 hours and only `UnbanAsync` lifts it. Escalate via ban history; `pcall` every call (throttled HTTP). Config field table is in full.md.
+Enforcement is a product decision with appeal implications. `Players:BanAsync`/`UnbanAsync` are server-only and need `Players.BanningEnabled`; `pcall` them. Duration, reason limits and device blocks: full.md.
 
 ### Anti-Patterns
 

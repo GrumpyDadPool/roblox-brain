@@ -643,3 +643,11 @@ if not video.IsLoaded then
 end
 video:Play()
 ```
+
+## UI state ownership and exposure
+
+- Route automatic opens, world-triggered opens, and manual buttons through the same window controller. Verify open state, close/back handlers, modal input, and focus on every entry path, including after rejoin and during round transitions.
+- When temporarily hiding UI, record each affected element's prior state and restore only state still owned by that temporary mode. Do not re-enable every touched screen. Test completion, cancellation, respawn, and overlap with another mode so stale snapshots cannot reopen closed menus or hide a newer screen.
+- For timed teaching, define when the instruction counts as exposed. Accrue time only while its intended presentation is actually available; pause or cancel deliberately behind menus, death screens, or other hiding states. Test hide/resume and verify the player receives the intended visible duration.
+- Separate structural placement from active-input affordances. Update buttons, reticles, and hints for the current input without making navigation jump between opposite screen edges on hybrid input changes. Test input switching, controller connection, viewport changes, and an already-open window independently.
+- Coalesce repeated updates for one countdown or event into an owned presentation rather than spawning a new toast for every tick. Bound simultaneous notices and verify a new urgent message remains readable while an existing countdown updates. Choose presentation density for the actual gameplay phase.

@@ -2,7 +2,7 @@
 name: roblox-collaboration-mode
 description: "Load FIRST for any Roblox task: build, change, fix, debug, review, audit, or plan. Sets initiative and which decisions need the user."
 when_to_use: "Every Roblox request, including small fixes, quick edits, audits, playtests, publishing, and design or strategy questions. Load it before the domain skill."
-last_reviewed: 2026-08-21
+last_reviewed: 2026-10-14
 sources:
   - original
 ---
@@ -28,12 +28,12 @@ Load first, before choosing a domain skill. Sets how much initiative to take and
 - Surface uncertainty explicitly: name what you are unsure about instead of resolving it silently.
 - Checklists are starting points, not completion proof. "The checklist passes" is never the whole report.
 - Offer options with trade-offs on hard forks; recommend one but leave the choice visible.
-- Push back when an approach looks wrong. Agreement without judgment is not collaboration.
+- Push back when an approach looks wrong; change position only for new evidence, and name it.
 
 ### Autonomous mode
 
 - Commit to the checklist as a floor: complete every applicable item and prove each one.
-- Report done means verified: read back state, run the game path, capture evidence. Never claim success from intention.
+- Done means verified: meet the loaded skills' checks, run the game path, record client, build and evidence. Never claim success from intention.
 - Make reversible decisions yourself; batch irreversible ones (publishing, migrations, data wipes) for explicit approval.
 
 ### Bravery scales with risk, per domain
@@ -48,7 +48,7 @@ Load first, before choosing a domain skill. Sets how much initiative to take and
 
 - When instructions conflict, ask once, early, concretely. Do not guess on high-risk items and do not nag on low-risk ones.
 - After you warn about a risk, the user's decision stands for otherwise permitted actions (precedence above): proceed without re-warning and note the accepted risk in one line.
-- State assumptions that shaped the plan in one line each, so the user can correct them cheaply.
+- Log assumptions, decisions and deferred work; reconcile them with current state before planning.
 - If the user's request depends on a fact you cannot verify (live API, store state, another dev's code), say so plainly rather than filling the gap.
 
-> Worked examples of mode inference and bravery calls: [references/full.md](references/full.md)
+> Examples and checkable rules: [references/full.md](references/full.md)

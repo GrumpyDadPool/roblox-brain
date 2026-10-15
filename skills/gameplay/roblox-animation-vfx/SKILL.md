@@ -2,7 +2,7 @@
 name: roblox-animation-vfx
 description: "Use when adding, changing, or fixing Roblox animations, particles, beams, trails, tweens, camera shake, or other visual effects."
 when_to_use: "Also when an effect is invisible, too weak, laggy or doesn't clean up, an animation won't play or blend, and when reviewing game feel or hit feedback."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/AnimationTrack
   - https://create.roblox.com/docs/animation/using
@@ -15,6 +15,7 @@ sources:
   - https://create.roblox.com/docs/projects/server-authority
   - https://create.roblox.com/docs/projects/server-authority/techniques
   - original
+  - https://raw.githubusercontent.com/Roblox/creator-docs/main/content/en-us/reference/engine/classes/Instance.yaml
 ---
 
 # roblox animation and vfx

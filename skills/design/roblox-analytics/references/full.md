@@ -372,3 +372,25 @@ are lost observations, not successful sessions; report coverage before conclusio
 > statements. The official facts (30-second `BindToClose` window, 4,194,304-character
 > key limit, RTBF templates, Cloud v2 endpoints and scopes) are sourced in the skill's
 > frontmatter and verified against current creator docs.
+
+## Analysis and observability integrity
+
+### Establish what the data can observe
+
+- Record source generation time, collection health, history depth, cadence, missing intervals, and metric/schema version before diagnosis. A successful query is not a freshness check. Declare the useful age limit for the decision; warn, return unavailable, or use a verified fallback when it is exceeded.
+- Inspect score distributions and baseline coverage before acting on trend rankings. Compare equivalent time-of-day windows when daily cycles can affect the signal. Recompute after method changes and keep conclusions provisional while coverage is inadequate.
+- Define when a session or bounded trace becomes observable. Immediately after a release, finished-session samples can overrepresent short sessions while longer sessions remain active. Use a declared maturity window or censoring-aware method; report eligible joins, observed completions, still-active sessions, capped traces, and lost observations separately.
+- Preserve the denominator. Continuation among players who completed a round describes a selected group; report all entrants, early eliminations, and exits before completion alongside it. Do not infer newcomer core-loop success from survivors alone.
+
+### Match labels to events and metrics
+
+- Distinguish exposure, attempt, success, skipping, and exit for optional tasks. Do not interpret unordered task completion as ordered funnel abandonment. Roblox funnels can complete skipped earlier steps automatically; reproduce the suspected interaction and inspect its event path before changing difficulty or rewards.
+- Record the cause of an exit from active play separately from the state change: elimination, disconnect while alive, practice completion, and cleanup are different events. Version changed semantics and rebuild comparable cohorts before calling a movement a gameplay regression.
+- Keep exact-day retention separate from any later observed return. State cohort eligibility, dates, timezone convention, follow-up window, and which saved history can identify the required return day. Do not label a later last-visit timestamp as D1 unless the records establish next-day return.
+- Name proxies literally. Friend presence is social context, not proof of paid or organic acquisition; reference art ranked by concurrent players is a popularity sample, not measured creative click performance. Obtain the actual source or creative metric separately where available.
+
+### Verify the collection-to-report path
+
+- Audit client and server observations through collection, bounded storage, retrieval, and the report used for decisions. Inject a controlled diagnostic event and confirm its stored and displayed form. A clean server log cannot establish client health, and a collected counter omitted from the report cannot support an operational decision.
+- When a telemetry replay is requested, list its captured channels, sampling resolution, truncation, final-flush behavior, and missing channels. Test capture through retrieval and viewer rendering. Treat the viewer as a reconstruction with known blind spots; do not infer intent or causal reasons for quitting from it.
+- For custom concurrent experiments, log eligibility, assigned arm, and actual exposure separately. Test assignment stability, balance, nearby-ID correlation, and exact agreement with the analysis implementation across representative and boundary inputs. Do not assume an untested hash is random or that implementations in different languages agree. Use a validated statistical plan; no session count is a universal stopping rule.

@@ -6,35 +6,25 @@ All notable changes to `roblox-brain` are documented here.
 
 ### Added
 
+- Mobile-first GUI guidance: design order from the smallest landscape phone, the screen regions Roblox UI already occupies, safe-area containers, measured placement, overlaps caused by state combinations, reflowing small-screen windows, console and TV rules, and a device matrix for the Simulator and Controller Emulator.
+- Cross-device input guidance: gamepad focus ownership (entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close), hybrid presentation from `PreferredInput`, touch action buttons, a single gameplay input gate, cancelling held actions, gamepad tool activation, platform button hints, and a cross-device test checklist.
 - First-session onboarding traces alongside analytics funnels, with bounded collection, save ownership, privacy, retention, and offline analysis guidance.
-- Selected Luau API and state-design guidance informed by Kampfkarren's guidelines, written independently and distinguished from personal style preferences.
-- Reuse-first integration guidance for proven project modules, plus centralized Game Pass benefits and purchase refresh handling.
-- Subscription reconciliation, Robux transfer receipt handling, dynamic prices, and price-aware gifting guidance.
-- Feature-level threat modeling and Luau literal-search, Unicode, binary-string, and repeat-loop pitfalls.
+- Monetization guidance for subscriptions, Robux transfer receipts, dynamic prices, and price-aware gifting, plus centralized Game Pass benefits and purchase refresh handling.
+- Reuse-first integration guidance for proven project modules.
+- Feature-level threat modeling, and Luau pitfalls around literal search, Unicode, binary strings, and repeat loops.
 - Remote transport and bindable boundaries, cross-server receive limits, and shared MemoryStore quota planning.
-- Text-entry, grid layout, truncation, RichText safety, and legacy GUI API migration guidance.
+- Text entry, grid layout, truncation, RichText safety, and legacy GUI API migration guidance.
 - Editor-safe source changes, undo recordings, Script Sync conflict handling, untrusted place-content boundaries, and asset-permission diagnosis.
-- `roblox-gui`: mobile-first layout guidance: design order from the smallest landscape phone, the screen regions Roblox UI already occupies, safe-area containers, measured placement with an example, overlaps caused by state combinations, reflowing small-screen windows, console/TV rules from the console guidelines, and a Device Simulator + Controller Emulator device matrix.
-- `roblox-gui`: gamepad focus ownership: entry focus, selection boundaries, focus after list rebuilds, layered Back, restoring focus on close, and stray selections that block gameplay.
-- `roblox-input`: hybrid-device presentation from `PreferredInput`, touch action buttons (touch ownership, placement from the jump button), a single gameplay input gate, cancelling held actions without firing, gamepad tool activation and center aim, platform button hints, and a cross-device input test checklist.
-- Drift-registry entries for the new API claims.
-- Verification and agent-workflow lessons distilled from a full development cycle of a shipped round-based game (build, launch, live ops), each traced to a recorded correction or bug and checked against official docs:
-  - `roblox-collaboration-mode`: checkable collaboration rules (skill checks before "done", evidence-linked advice changes, persistent observation logs, preserving approved baselines, verifying delegated work).
-  - `roblox-studio-mcp`: multiplayer client identity, input-coordinate calibration, separating handler/synthetic/hardware evidence, test-override hygiene, positive visibility controls, camera cleanup.
-  - `roblox-publish-checklist`: close the release against the version actually serving players; dependency inventories; a player-state × round-event transition matrix.
-  - `roblox-tooling`: release isolation, generated-tree replacement checks, targeted reverts and historical-build rollbacks.
-  - `roblox-analytics`: data freshness, observation maturity and censoring, denominators, optional-task and exit-cause semantics, exact retention definitions, collection-to-report audits, and custom experiment assignment checks.
-  - Regression checks for `roblox-architecture`, `roblox-audio`, `roblox-building`, `roblox-input`, `roblox-gui`, `roblox-data`, `roblox-server-data`, `roblox-networking`, `roblox-camera`, `roblox-physics`, `roblox-npc-ai`, `roblox-game-design`, `roblox-luau-patterns`, `roblox-security`, `roblox-animation-vfx`, and `roblox-monetization`.
+- Lessons from a full build, launch, and live-ops cycle of a round-based game, across the collaboration, Studio MCP, publishing, tooling, and analytics skills.
 
 ### Changed
 
-- Every skill's description now triggers on changing, fixing, debugging, reviewing and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases users actually type ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). Hosts that list skills by description now match bug reports and audit requests.
-- `validate_skills.py` accepts an optional `when_to_use` (≤300 chars), excluded from the SKILL.md size cap; AGENTS.md documents trigger-phrase conventions.
-- Removed individual community attributions and community-sourced field notes from `roblox-architecture`, `roblox-tooling`, and `roblox-growth-design`. The underlying guidance stays as field-reported synthesis, without named contributors.
+- Every skill's description now triggers on changing, fixing, debugging, reviewing, and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). `validate_skills.py` accepts the optional field, and AGENTS.md documents the convention.
+- Removed individual community attributions and community-sourced field notes from `roblox-architecture`, `roblox-tooling`, and `roblox-growth-design`; the underlying guidance stays as field-reported synthesis, without named contributors.
 
 ### Fixed
 
-- `roblox-input`: `PreferredInput` is typed `Enum.PreferredInput`, not `Enum.UserInputType`. The "Switch UI on PreferredInput change" example now observes `PreferredInput` instead of `LastInputTypeChanged`.
+- `roblox-input`: `PreferredInput` is typed `Enum.PreferredInput`, not `Enum.UserInputType`, and the example now observes `PreferredInput`.
 
 ## [2.2.0] - 2026-10-02
 

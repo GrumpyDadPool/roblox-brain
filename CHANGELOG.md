@@ -30,6 +30,7 @@ All notable changes to `roblox-brain` are documented here.
 
 - Every skill's description now triggers on changing, fixing, debugging, reviewing and auditing, not only on building, and each skill gains a `when_to_use` line of symptom phrases users actually type ("data not saving", "UI overlaps on mobile", "controller stuck in a menu"). Hosts that list skills by description now match bug reports and audit requests.
 - `validate_skills.py` accepts an optional `when_to_use` (≤300 chars), excluded from the SKILL.md size cap; AGENTS.md documents trigger-phrase conventions.
+- Removed individual community attributions and community-sourced field notes from `roblox-architecture`, `roblox-tooling`, and `roblox-growth-design`. The underlying guidance stays as field-reported synthesis, without named contributors.
 
 ### Fixed
 

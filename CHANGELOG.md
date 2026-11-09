@@ -2,6 +2,19 @@
 
 All notable changes to `roblox-brain` are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- Creator-docs sync, 2026-11-08 (docs state as of the 2026-11-07 upstream sync). Three API claims had drifted and are corrected: `Workspace.StreamingIntegrityMode` and `Workspace.PredictiveStreamingMode` are scriptable properties now (the `NotScriptable` tag is gone, write security `None`), and `SoundService.DefaultListenerLocation` is writable from regular scripts (write security `None`, previously `PluginSecurity`). The drift registry now pins the new facts, and the performance and audio skills were re-reviewed.
+
+### Added
+
+- Device Trust coverage in the security skill: `Player.DeviceTrustLevel`, the `IntegrityService.EvaluatePlayerDeviceTrust` join callback, the trust levels and per-platform support, and policy patterns (gate sensitive features, route, or reject), with registry entries pinning the new API surface.
+- Studio MCP notes: the official bridge can call Open Cloud APIs through `open_cloud_invoke` under per-game scopes granted in Studio, with no API key in the client.
+- Networking notes: platform-integrated chat becomes mandatory in May 2027; what changes when `TextChatService.PlatformIntegratedChat` is enabled and how to migrate early.
+- Monetization notes: Roblox's rewarded video optimization guide and per-genre playbooks.
+
 ## [2.3.1] - 2026-10-14
 
 ### Fixed

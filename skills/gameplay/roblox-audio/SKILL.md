@@ -2,7 +2,7 @@
 name: roblox-audio
 description: "Use when adding, changing, or fixing Roblox audio: playback, spatial sound, music, sound effects, SoundGroups, or dynamic effects."
 when_to_use: "Also when a sound doesn't play, is too loud or quiet, overlaps or loops wrongly, volume settings, and auditing audio assets or mixes."
-last_reviewed: 2026-10-14
+last_reviewed: 2026-11-08
 sources:
   - https://create.roblox.com/docs/reference/engine/classes/SoundService
   - https://create.roblox.com/docs/audio/objects
@@ -36,7 +36,7 @@ s.Parent = SoundService; s:Play()
 
 **SoundGroups** (mixer): Nest `SoundGroup` under Master for player-adjustable Music vs SFX volume. `bgMusic.SoundGroup = musicGroup`. Effects (`ReverbSoundEffect`, `EqualizerSoundEffect`, `CompressorSoundEffect`, etc.) parent to Sound/SoundGroup. Ducking: `CompressorSoundEffect` with `SideChain = sfxGroup` on music.
 
-**New Modular**: 2D: `AudioPlayer → Wire → AudioDeviceOutput`. 3D: `AudioPlayer → Wire → AudioEmitter` (on Part). Studio/plugin-only `SoundService.DefaultListenerLocation` controls the default listener; wire an explicit `AudioListener` for runtime control.
+**New Modular**: 2D: `AudioPlayer → Wire → AudioDeviceOutput`. 3D: `AudioPlayer → Wire → AudioEmitter` (on Part). `SoundService.DefaultListenerLocation` controls the default listener and is scriptable (write security `None`); wire an explicit `AudioListener` for custom placement.
 
 **One-Shot SFX**:
 ```luau

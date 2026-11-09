@@ -277,6 +277,29 @@ end
 
 Enforcement is a product decision, not an automatic response. Bans carry appeal implications, `DisplayReason` is filtered and shown to real users, and false positives from lag or tuning mistakes are permanent records in ban history. The docs themselves direct you to publish experience rules and provide an appeal path. Log detection context first, keep thresholds forgiving, and reserve permanent bans for clear violations. <!-- temporal: 2026-09 -->
 
+## Device Trust (platform device signal) <!-- temporal: 2026-11 -->
+
+The Device Trust API reports how much Roblox trusts each player's *device*: a platform signal that complements server-side anticheat, not a verdict on whether the player is cheating. Roblox takes no action on it; the policy is yours. Full guide: [Device trust](https://create.roblox.com/docs/scripting/security/device-trust).
+
+- `Player.DeviceTrustLevel` (read it on the server): one of `Enum.PlayerDeviceTrustLevel` — `Pending`, `Unknown`, `None`, `Standard`, `Full`. Every player starts at `Pending`; the value changes once when the check finishes and can stay `Pending` for a whole session, so treat `Pending` as untrusted for sensitive features. Other clients see `Pending` for a player, and Studio always reports `Pending`.
+- `IntegrityService.EvaluatePlayerDeviceTrust`: server callback (assign it in a `Script` in `ServerScriptService`) fired once per player when their level becomes available. Return a table with `Action = Enum.PlayerDeviceTrustDecision.Reject` (plus an optional user-facing `Message`) to disconnect the player, or `Action = Enum.PlayerDeviceTrustDecision.Accept` to keep them. Keep rejection logic inside the callback.
+- Verified platforms today: Android, Chromebook, and Meta Quest can report `None`, `Standard`, or `Full`. Web always reports `None`. iOS, macOS, Windows, Xbox, and PlayStation report `Unknown` until support lands there — `Unknown` means Roblox cannot tell, not that the device is untrusted.
+- Typical policies: gate trading, ranked play, or other sensitive features on `Standard`/`Full`; route low-trust players together; reject `None` only where the genre justifies it. The guide gives per-genre recommendations.
+
+```luau
+local IntegrityService = game:GetService("IntegrityService")
+
+IntegrityService.EvaluatePlayerDeviceTrust = function(player, measures)
+	if player.DeviceTrustLevel == Enum.PlayerDeviceTrustLevel.None then
+		return {
+			Action = Enum.PlayerDeviceTrustDecision.Reject,
+			Message = "This game can't verify your device.",
+		}
+	end
+	return { Action = Enum.PlayerDeviceTrustDecision.Accept }
+end
+```
+
 ## Client-Triggerable Interaction Instances
 
 `ProximityPrompt`, `ClickDetector`, and `DragDetector` are remote-equivalent attack surfaces: the engine delivers a client interaction to a server-side callback with a `Player` argument, so exploiters can trigger them without your UI and outside your intended flow. The exploit table above covers only `RemoteEvent`s; these belong in the same audit.

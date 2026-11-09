@@ -223,6 +223,10 @@ Test in a non-production place with representative data:
 
 Keep test product IDs and test entitlements out of production configuration.
 
+## Rewarded video ads <!-- temporal: 2026-11 -->
+
+Roblox publishes rewarded video guidance: an [optimization guide](https://create.roblox.com/docs/production/promotion/rewarded-video-optimization) plus per-genre playbooks (obby, tycoon, RPG, shooter, sports, survival, incremental sim). Treat a rewarded ad as an opt-in exchange — the player chooses to watch and receives a defined reward — keep the reward grant server-side under the same separation as developer product grants (section 2), and follow the playbook for the game's genre rather than copying another genre's placement or cadence.
+
 ## Monetization checklist
 
 - [ ] Prompting is client-side, granting is server-side.

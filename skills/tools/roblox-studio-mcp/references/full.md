@@ -68,6 +68,10 @@ Two Studio MCP bridges are in active use. The official Roblox Studio MCP server 
 | `list_roblox_studios` | List all connected Studio instances (name, Studio instance ID, place ID). |
 | `studio_id` | Parameter on every official tool call naming the target instance. Older builds reportedly exposed `set_active_studio` (session-state switching); that name is absent from the current official tool set, so route on `studio_id` and confirm against `tools/list`. |
 
+### Open Cloud via the official bridge <!-- temporal: 2026-11 -->
+
+The official Studio MCP server can call Open Cloud APIs through an `open_cloud_invoke` tool: upload assets, manage developer products and game passes, change game settings, and more, without the MCP client ever handling an API key ([docs](https://create.roblox.com/docs/studio/mcp-open-cloud)). Access is governed by per-game scopes the account owner grants in Studio; the client cannot widen its own permissions. Requires a published game's place open in Studio and manage permission on that game.
+
 ## Session and Datamodel Contract
 
 Route by capability BEFORE bridge-specific bootstrap. Call `tools/list` first: `get_connected_instances`/`eval_*`/`multiplayer_*` identifies the chrrxs bridge; `list_roblox_studios` plus per-call `studio_id` parameters identifies the official bridge. Then, on the detected bridge:

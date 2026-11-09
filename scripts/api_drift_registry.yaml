@@ -206,33 +206,34 @@ entries:
     property: StreamingEnabled
   verified: 2026-07-23
 - id: performance-streaming-integrity-mode-exists
-  claim: Workspace.StreamingIntegrityMode replaces removed StreamingPauseMode guidance
+  claim: Workspace.StreamingIntegrityMode replaces removed StreamingPauseMode guidance;
+    the property is scriptable (no NotScriptable tag, write security None)
   files:
   - path: skills/core/roblox-performance/SKILL.md
   - path: skills/core/roblox-performance/references/full.md
   check:
-    type: property_has_tag
+    type: property_write_security
     class: Workspace
     property: StreamingIntegrityMode
-    tag: NotScriptable
-  verified: 2026-07-26
-- id: performance-predictive-streaming-not-scriptable
-  claim: Workspace.PredictiveStreamingMode is configured in Studio, not by runtime
-    scripts
+    expected: None
+  verified: 2026-11-08
+- id: performance-predictive-streaming-scriptable
+  claim: Workspace.PredictiveStreamingMode is scriptable (no NotScriptable tag,
+    write security None); Default currently behaves like Disabled
   files:
   - path: skills/core/roblox-performance/references/full.md
   teaching_needles:
   - PredictiveStreamingMode
-  - not scriptable
+  - scriptable
   check:
-    type: property_has_tag
+    type: property_write_security
     class: Workspace
     property: PredictiveStreamingMode
-    tag: NotScriptable
-  verified: 2026-08-07
+    expected: None
+  verified: 2026-11-08
 - id: audio-default-listener-location-exists
   claim: SoundService.DefaultListenerLocation controls default advanced-audio listener
-    placement
+    placement and is writable from regular scripts (write security None)
   files:
   - path: skills/gameplay/roblox-audio/SKILL.md
   - path: skills/gameplay/roblox-audio/references/full.md
@@ -240,8 +241,44 @@ entries:
     type: property_write_security
     class: SoundService
     property: DefaultListenerLocation
-    expected: PluginSecurity
-  verified: 2026-07-26
+    expected: None
+  verified: 2026-11-08
+- id: security-device-trust-level-exists
+  claim: Player.DeviceTrustLevel reports the player's device trust level (Pending,
+    Unknown, None, Standard, or Full)
+  files:
+  - path: skills/core/roblox-security/references/full.md
+  teaching_needles:
+  - DeviceTrustLevel
+  check:
+    type: property_exists
+    class: Player
+    property: DeviceTrustLevel
+  verified: 2026-11-08
+- id: security-integrity-service-callback-exists
+  claim: IntegrityService.EvaluatePlayerDeviceTrust callback decides whether a player
+    can stay in the server once their device trust level is available
+  files:
+  - path: skills/core/roblox-security/references/full.md
+  teaching_needles:
+  - EvaluatePlayerDeviceTrust
+  check:
+    type: member_exists
+    class: IntegrityService
+    member: EvaluatePlayerDeviceTrust
+  verified: 2026-11-08
+- id: security-device-trust-decision-enum-exists
+  claim: Enum.PlayerDeviceTrustDecision includes Reject, the value that disconnects
+    a player from the EvaluatePlayerDeviceTrust callback
+  files:
+  - path: skills/core/roblox-security/references/full.md
+  teaching_needles:
+  - PlayerDeviceTrustDecision
+  check:
+    type: enum_item_exists
+    enum: PlayerDeviceTrustDecision
+    item: Reject
+  verified: 2026-11-08
 - id: bind-to-simulation-requires-fixed-simulation
   claim: RunService:BindToSimulation requires Workspace.UseFixedSimulation
   files:

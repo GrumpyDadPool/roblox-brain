@@ -2,7 +2,7 @@
 name: roblox-performance
 description: "Use when profiling or fixing Roblox performance: low FPS, lag, memory, network load, slow phones, hot paths."
 when_to_use: "Also when the game stutters, phones overheat or crash, server heartbeat drops, before adding many parts/effects/UI, and when auditing performance before release."
-last_reviewed: 2026-10-02
+last_reviewed: 2026-11-08
 sources:
   - https://create.roblox.com/docs/en-us/performance-optimization/microprofiler
   - https://create.roblox.com/docs/en-us/reference/engine/libraries/debug
@@ -52,7 +52,7 @@ Pre-clone and reuse. Canonical pool code (token-lease ownership): `roblox-luau-p
 ### StreamingEnabled Essentials
 - **On by default**. Container-scoped: only Workspace descendants stream. `ModelStreamingBehavior = Improved` streams non-BasePart descendants with their parent Model; Legacy streams only BaseParts.
 - **Streamed-out = parented to nil**, not destroyed. Luau refs persist if it streams back.
-- **Config (Studio)**: target defaults 1024, min 64; set `StreamingIntegrityMode`; tune from data.
+- **Config**: target defaults 1024, min 64; set `StreamingIntegrityMode`; tune from data.
 - **Gotcha**: `FindFirstChild("DistantPart")` returns nil if streamed out. Use WaitForChild with timeout.
 
 ### Mobile

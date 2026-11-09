@@ -340,14 +340,17 @@ Configuration:
 - `StreamingMinRadius`: highest-priority radius; Studio default is 64 studs.
 - `StreamingIntegrityMode`: behavior when a player enters an incompletely streamed region.
 
-These settings are not scriptable. Tune them in Studio from measurements on
-representative devices; do not assume a smaller radius is automatically better.
+None of these carries a `NotScriptable` tag today; they are scriptable
+properties (read/write security `None`). In practice you still tune them in
+Studio from measurements on representative devices rather than mutating them
+at runtime; do not assume a smaller radius is automatically better.
+<!-- temporal: 2026-11 -->
 
 **Gotcha**: `workspace:FindFirstChild("DistantPart")` returns nil if the part is streamed out. Use `WaitForChild` with timeout, or design systems that don't depend on distant parts existing on the client.
 
 ### Predictive Streaming (2026-07)
 
-`Workspace.PredictiveStreamingMode` is Studio-only and not scriptable. `Default` currently behaves like `Disabled`; `Enabled` lets the engine prefetch likely destinations for streaming-enabled experiences.
+`Workspace.PredictiveStreamingMode` is a scriptable property (no `NotScriptable` tag; read/write security `None`). `Default` currently behaves like `Disabled`; `Enabled` lets the engine prefetch likely destinations for streaming-enabled experiences.
 
 Spawn prefetching creates small temporary streaming foci at possible respawn locations after a player dies. CFrame return optimization keeps the area a player just left streamed in for a likely near-term return. Predictions are additive and temporary, so remeasure memory and bandwidth on representative devices.
 

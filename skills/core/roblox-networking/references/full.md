@@ -463,6 +463,8 @@ The mock implements the same surface (`Event`, `Function`, or your project's equ
 
 [TextChatService](https://create.roblox.com/docs/reference/engine/classes/TextChatService) is the current chat system. The legacy chat system was retired April 30, 2025: Roblox auto-migrates experiences still on `ChatVersion.LegacyChatService`, and custom integrations that bypass TextChatService break or get moderated ([migration announcement](https://devforum.roblox.com/t/migrate-to-textchatservice-removing-support-for-legacy-chat-and-custom-chat-systems/3237100), [status update](https://devforum.roblox.com/t/update-on-legacy-chat-deprecation-and-textchatservice-migration/3376880)). <!-- temporal: 2025-05 --> `TextChatService.ChatVersion` is not scriptable; set it in Studio. Never build new chat features on the legacy `Chat` service.
 
+**Platform-integrated chat is coming.** Starting May 2027, platform-integrated chat will be required for all experiences: Roblox delivers and renders messages itself (the default window or a `TextChannelWindow` you place), custom chat UIs can no longer render messages, and message content stops being accessible to code — APIs that previously returned message text return `""` instead. Chat-triggered commands must be `TextChatCommand`s. Opt in on your own schedule by setting `TextChatService.PlatformIntegratedChat` to **Enabled** in Studio (Studio-only; scripts can read it but not change it) and migrate custom chat features to the native systems before the deadline ([docs](https://create.roblox.com/docs/chat/platform-integrated-chat)). <!-- temporal: 2026-11 -->
+
 ### Instance tree
 
 Default runtime tree when `TextChatService.CreateDefaultTextChannels` and `CreateDefaultCommands` are true (both are Studio properties, not scriptable):

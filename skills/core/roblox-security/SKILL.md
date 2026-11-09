@@ -6,6 +6,7 @@ last_reviewed: 2026-10-14
 sources:
   - https://create.roblox.com/docs/ui/text-filtering
   - https://create.roblox.com/docs/scripting/security/security-tactics
+  - https://create.roblox.com/docs/scripting/security/device-trust
   - https://create.roblox.com/docs/scripting/security/client-server-boundary
   - https://create.roblox.com/docs/projects/server-authority
   - https://create.roblox.com/docs/projects/server-authority/techniques
@@ -29,7 +30,7 @@ Load for authority, remote abuse, economy, saves, bans, or sandboxing audits. Re
 ### Authority Models
 
 - **Classic replication:** validate client requests against server state. Never trust client damage, currency, inventory, permissions, or positions.
-- **Server Authority:** `Workspace.AuthorityMode = Server`: the server owns core simulation while clients predict and recover from misprediction. Use `BindToSimulation()` (needs `UseFixedSimulation`), not blanket `Heartbeat` correction. Cheap for stock characters, rewrite-scale for authored simulation (full.md).
+- **Server Authority:** `Workspace.AuthorityMode = Server`: the server owns core simulation with client prediction. Use `BindToSimulation()` (needs `UseFixedSimulation`), not blanket `Heartbeat` correction. Cheap for stock characters, rewrite-scale for authored simulation (full.md).
 - **Both:** validate attacks, purchases, teleports, permissions, and custom remotes at the server boundary.
 
 ### Audit Checklist
@@ -42,10 +43,10 @@ Load for authority, remote abuse, economy, saves, bans, or sandboxing audits. Re
 
 ### Enforcement
 
-Enforcement is a product decision with appeal implications. `Players:BanAsync`/`UnbanAsync` are server-only and need `Players.BanningEnabled`; `pcall` them. Duration, reason limits and device blocks: full.md.
+Enforcement is a product decision with appeal implications. `Players:BanAsync`/`UnbanAsync` are server-only and need `Players.BanningEnabled`; `pcall` them. Duration, reason limits, device blocks, and device trust (`Player.DeviceTrustLevel`, `IntegrityService`): full.md.
 
 ### Anti-Patterns
 
-Don't obfuscate client code, use `_G` for security, kick without logging, over-validate movement, or rely on client anti-cheat.
+Don't obfuscate client code, use `_G` for security, kick without logging, or rely on client anti-cheat.
 
 See `references/full.md` for detailed examples.
